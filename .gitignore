@@ -1,0 +1,5 @@
+# Filesystem extras
+*.DS_Store
+*.vscode
+# Emacs backups
+*.*~
