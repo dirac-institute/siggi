@@ -1,5 +1,7 @@
 import numpy as np
-from lsst_utils import Bandpass
+from . import Bandpass, BandpassDict
+
+__all__ = ["filters"]
 
 
 class filters(object):
@@ -9,7 +11,7 @@ class filters(object):
     a Bandpass dictionary.
     """
 
-    def __init__(self, wavelen_min=300, wavelen_max=15000, wavelen_step=0.1):
+    def __init__(self, wavelen_min=300, wavelen_max=1500, wavelen_step=0.1):
 
         self.wavelen_min = wavelen_min
         self.wavelen_max = wavelen_max
@@ -31,9 +33,9 @@ class filters(object):
         Returns
         -------
 
-        bandpass_list, list of Bandpass objects
+        bandpass_dict, BandpassDict Object
 
-            This bandpass list can then be used at the input to BandpassDict
+            This can then be used to calculate magnitudes on spectra
         """
 
         if len(np.shape(filter_details)) == 2:
@@ -57,6 +59,7 @@ class filters(object):
             sb = np.zeros(len(wavelen_arr))
 
             climb_width = (band[1] - band[2])/2.
+            ### TODO: Fix this for top hat filter because fails when climb_width=0.
             slope = 1./climb_width
             climb_values = np.array([slope*i for i in \
                                      np.arange(0, climb_width+offset, 
@@ -72,5 +75,8 @@ class filters(object):
             bp_object = Bandpass(wavelen=wavelen_arr, sb=sb)
 
             bandpass_list.append(bp_object)
+            name_list = ['filter_%i' % idx for idx in range(len(bandpass_list))]
 
-        return bandpass_list
+            bandpass_dict = BandpassDict(bandpass_list, name_list)
+
+        return bandpass_dict
