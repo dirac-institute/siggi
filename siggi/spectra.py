@@ -1,5 +1,4 @@
 import numpy as np
-from astroML.datasets import sdss_corrected_spectra
 from . import Sed
 
 __all__ = ["spectra"]
@@ -31,8 +30,8 @@ class spectra(object):
 
     def get_sigmoid_spectrum(self, lam_0=364.6):
 
-        wavelen = np.arange(99., 2400.05, 0.1)
-        spec = 1 / np.exp(wavelen - lam_0)
+        wavelen = np.arange(9., 2400.05, 0.1)
+        spec = 1 / (1 + np.exp(lam_0-wavelen))
         sed_obj = Sed()
         sed_obj.setSED(wavelen=wavelen, flambda=spec)
 
