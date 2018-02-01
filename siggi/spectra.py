@@ -13,24 +13,27 @@ class spectra(object):
 
     def __init__(self):
 
-        data = sdss_corrected_spectra.fetch_sdss_corrected_spectra()
-        self.spectra = sdss_corrected_spectra.reconstruct_spectra(data)
-        self.wavelen = sdss_corrected_spectra.compute_wavelengths(data)
-
         return
 
     def get_red_spectrum(self):
 
-        spec = self.spectra[3100]/np.max(self.spectra[3100])
         sed_obj = Sed()
-        sed_obj.setSED(self.wavelen/10., spec)
+        sed_obj.readSED_flambda('../data/Inst.10E10.1Z.spec.gz')
 
         return sed_obj
 
     def get_blue_spectrum(self):
 
-        spec = self.spectra[684]/np.max(self.spectra[684])
         sed_obj = Sed()
-        sed_obj.setSED(self.wavelen/10., spec)
+        sed_obj.readSED_flambda('../data/Inst.64E08.1Z.spec.gz')
+
+        return sed_obj
+
+    def get_sigmoid_spectrum(self, lam_0=364.6):
+
+        wavelen = np.arange(99., 2400.05, 0.1)
+        spec = 1 / np.exp(wavelen - lam_0)
+        sed_obj = Sed()
+        sed_obj.setSED(wavelen=wavelen, flambda=spec)
 
         return sed_obj
