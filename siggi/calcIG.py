@@ -88,35 +88,59 @@ class calcIG(object):
         sed_probs = self.prior(y_range)
 
         hyx_sum = 0
-        c_max = np.max(colors) + 5*np.max(errors)
-        c_min = np.min(colors) - 5*np.max(errors)
-        dens_step = (c_max - c_min) / 250.
+        # c_max = np.max(colors) + 5*np.max(errors)
+        # c_min = np.min(colors) - 5*np.max(errors)
+        # dens_step = (c_max - c_min) / 250.
         num_colors = np.shape(colors)[1]
 
-        dens_range = np.arange(c_min, c_max, dens_step)
-        d_range = [dens_range for dim in range(num_colors)]
-        dens_range = np.meshgrid(*d_range)
-        dens_range = np.transpose(dens_range)
-        dens_range = np.reshape(dens_range, (len(dens_range)**num_colors,
-                                             num_colors))
+        # dens_range = np.arange(c_min, c_max, dens_step)
+        # d_range = [dens_range for dim in range(num_colors)]
+        # dens_range = np.meshgrid(*d_range)
+        # dens_range = np.transpose(dens_range)
+        # dens_range = np.reshape(dens_range, (len(dens_range)**num_colors,
+        #                                      num_colors))
 
         rv = stats.multivariate_normal
 
-        x_total = np.zeros(len(dens_range))
+        # x_total = np.zeros(len(dens_range))
+        x_total = None
         y_vals = []
+        num_points = 100000.
 
         for idx in range(len(y_range)):
-            y_dens = sed_probs[idx]*rv.pdf(dens_range, mean=colors[idx],
-                                           cov=np.diagflat(errors[idx]))
-            x_total += y_dens
-            y_vals.append(y_dens)
+            # y_dens = sed_probs[idx]*rv.pdf(dens_range, mean=colors[idx],
+            #                                cov=np.diagflat(errors[idx]))
+            y_samples = rv.rvs(mean=colors[idx], cov=np.diagflat(errors[idx]),
+                               size=int(sed_probs[idx]*num_points))
+            # print(y_samples)
+            if int(sed_probs[idx]*num_points) == 1:
+                y_samples = np.array([y_samples])
+            if x_total is None:
+                x_total = y_samples
+            else:
+                # print(np.shape(x_total), np.shape(y_samples))
+                x_total = np.concatenate((x_total, y_samples))
+            # y_vals.append(y_dens)
+            y_vals.append(y_samples)
 
         y_vals = np.array(y_vals)
 
-        for idx in range(len(dens_range)):
-            hyx_i = np.nansum(dens_step*y_vals[:, idx]*np.log2(y_vals[:, idx] /
-                                                               x_total[idx]))
+        x_hist, bins = np.histogramdd(np.array(x_total), bins=100)
+        step_size = bins[0][1] - bins[0][0]
+        y_hists = [np.histogramdd(np.array(y_pts), bins=bins)
+                   for y_pts in y_vals]
+
+        for idx in range(len(y_range)):
+            # print((y_hists[idx][0]/num_points) *
+            #                  np.log2(y_hists[idx][0]/x_hist))
+            hyx_i = np.nansum((y_hists[idx][0]/num_points) *
+                              np.log2(y_hists[idx][0]/x_hist))
             hyx_sum += hyx_i
+
+        # for idx in range(len(dens_range)):
+        #     hyx_i = np.nansum(dens_step*y_vals[:, idx]*np.log2(y_vals[:, idx] /
+        #                                                        x_total[idx]))
+        #     hyx_sum += hyx_i
 
         return -1.*hyx_sum
 
