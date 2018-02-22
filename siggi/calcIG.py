@@ -105,16 +105,14 @@ class calcIG(object):
         # x_total = np.zeros(len(dens_range))
         x_total = None
         y_vals = []
-        num_points = 100000.
+        num_points = 100
 
         for idx in range(len(y_range)):
             # y_dens = sed_probs[idx]*rv.pdf(dens_range, mean=colors[idx],
             #                                cov=np.diagflat(errors[idx]))
             y_samples = rv.rvs(mean=colors[idx], cov=np.diagflat(errors[idx]),
-                               size=int(sed_probs[idx]*num_points))
+                               size=num_points)
             # print(y_samples)
-            if int(sed_probs[idx]*num_points) == 1:
-                y_samples = np.array([y_samples])
             if x_total is None:
                 x_total = y_samples
             else:
@@ -125,16 +123,21 @@ class calcIG(object):
 
         y_vals = np.array(y_vals)
 
-        x_hist, bins = np.histogramdd(np.array(x_total), bins=100)
-        step_size = bins[0][1] - bins[0][0]
-        y_hists = [np.histogramdd(np.array(y_pts), bins=bins)
-                   for y_pts in y_vals]
+        x_dens = np.zeros(len(x_total))
+        y_dens_list = []
 
         for idx in range(len(y_range)):
-            # print((y_hists[idx][0]/num_points) *
-            #                  np.log2(y_hists[idx][0]/x_hist))
-            hyx_i = np.nansum((y_hists[idx][0]/num_points) *
-                              np.log2(y_hists[idx][0]/x_hist))
+            y_dens = sed_probs[idx]*rv.pdf(x_total, mean=colors[idx],
+                                           cov=np.diagflat(errors[idx]))
+            x_dens += y_dens
+            y_dens_list.append(y_dens)
+
+        total_points = len(x_total)
+
+        for idx in range(len(y_range)):
+
+            hyx_i = (1./total_points)* np.nansum(y_dens_list[idx] *
+                                               np.log2(y_dens_list[idx]/x_dens))
             hyx_sum += hyx_i
 
         # for idx in range(len(dens_range)):
