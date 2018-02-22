@@ -52,7 +52,7 @@ class calcIG(object):
         color_errors = []
 
         mag_error = 1.0/self.snr
-        color_error = np.sqrt(2.)*mag_error  # Just error prop for sum
+        color_error = np.sqrt(2)*mag_error
 
         for sed_obj in self._sed_list:
 
@@ -61,7 +61,7 @@ class calcIG(object):
                 print(sed_mags)
             sed_colors.append([sed_mags[i] - sed_mags[i-1]
                                for i in range(len(sed_mags) - 1)])
-            color_errors.append([color_error])
+            color_errors.append([color_error for i in range(len(sed_mags)-1)])
 
         return np.array(sed_colors), np.array(color_errors)
 
@@ -91,17 +91,23 @@ class calcIG(object):
         c_max = np.max(colors) + 5*np.max(errors)
         c_min = np.min(colors) - 5*np.max(errors)
         dens_step = (c_max - c_min) / 250.
+        num_colors = np.shape(colors)[1]
 
         dens_range = np.arange(c_min, c_max, dens_step)
+        d_range = [dens_range for dim in range(num_colors)]
+        dens_range = np.meshgrid(*d_range)
+        dens_range = np.transpose(dens_range)
+        dens_range = np.reshape(dens_range, (len(dens_range)**num_colors,
+                                             num_colors))
 
-        rv = stats.norm
+        rv = stats.multivariate_normal
 
         x_total = np.zeros(len(dens_range))
         y_vals = []
 
         for idx in range(len(y_range)):
-            y_dens = sed_probs[idx]*rv.pdf(dens_range, colors[idx],
-                                           errors[idx])
+            y_dens = sed_probs[idx]*rv.pdf(dens_range, mean=colors[idx],
+                                           cov=np.diagflat(errors[idx]))
             x_total += y_dens
             y_vals.append(y_dens)
 
