@@ -88,37 +88,25 @@ class calcIG(object):
         sed_probs = self.prior(y_range)
 
         hyx_sum = 0
-        # c_max = np.max(colors) + 5*np.max(errors)
-        # c_min = np.min(colors) - 5*np.max(errors)
-        # dens_step = (c_max - c_min) / 250.
-        num_colors = np.shape(colors)[1]
 
-        # dens_range = np.arange(c_min, c_max, dens_step)
-        # d_range = [dens_range for dim in range(num_colors)]
-        # dens_range = np.meshgrid(*d_range)
-        # dens_range = np.transpose(dens_range)
-        # dens_range = np.reshape(dens_range, (len(dens_range)**num_colors,
-        #                                      num_colors))
+        num_colors = np.shape(colors)[1]
 
         rv = stats.multivariate_normal
 
-        # x_total = np.zeros(len(dens_range))
         x_total = None
         y_vals = []
         num_points = 100
 
         for idx in range(len(y_range)):
-            # y_dens = sed_probs[idx]*rv.pdf(dens_range, mean=colors[idx],
-            #                                cov=np.diagflat(errors[idx]))
+
             y_samples = rv.rvs(mean=colors[idx], cov=np.diagflat(errors[idx]),
                                size=num_points)
-            # print(y_samples)
+
             if x_total is None:
                 x_total = y_samples
             else:
-                # print(np.shape(x_total), np.shape(y_samples))
                 x_total = np.concatenate((x_total, y_samples))
-            # y_vals.append(y_dens)
+
             y_vals.append(y_samples)
 
         y_vals = np.array(y_vals)
@@ -136,14 +124,10 @@ class calcIG(object):
 
         for idx in range(len(y_range)):
 
-            hyx_i = (1./total_points)* np.nansum(y_dens_list[idx] *
-                                               np.log2(y_dens_list[idx]/x_dens))
+            hyx_i = (1./total_points) * np.nansum(y_dens_list[idx] *
+                                                  np.log2(y_dens_list[idx] /
+                                                          x_dens))
             hyx_sum += hyx_i
-
-        # for idx in range(len(dens_range)):
-        #     hyx_i = np.nansum(dens_step*y_vals[:, idx]*np.log2(y_vals[:, idx] /
-        #                                                        x_total[idx]))
-        #     hyx_sum += hyx_i
 
         return -1.*hyx_sum
 
