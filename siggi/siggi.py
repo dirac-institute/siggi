@@ -34,7 +34,8 @@ class siggi(object):
                          snr_level=5., num_filters=6, filter_type='trap',
                          adjust_widths=False, width_min=30., width_max=120.,
                          width_steps=10, adjust_width_ratio=False, 
-                         ratio_min=0.1, ratio_max=1.0, ratio_steps=10):
+                         ratio_min=0.1, ratio_max=1.0, ratio_steps=10,
+                         procs=4):
 
         self.filt_wave_range = np.linspace(filt_min, filt_max, filt_steps)
 
@@ -55,7 +56,7 @@ class siggi(object):
 
         processes = []
 
-        pool = mp.Pool(processes=4)
+        pool = mp.Pool(processes=procs)
 
         pool_res = pool.map(unwrap_self_f, zip([self]*num_points, 
                                                [[idx, dim_list, width_max,
