@@ -90,7 +90,7 @@ class calcIG(object):
         rv = stats.multivariate_normal
 
         y_vals = []
-        num_points = 1000
+        num_points = 100
         x_total = np.zeros((len(y_range)*num_points))
 
         for idx in range(len(y_range)):
