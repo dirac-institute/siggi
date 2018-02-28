@@ -4,6 +4,7 @@ from copy import deepcopy
 from functools import reduce
 from . import filters, spectra, calcIG
 
+
 def unwrap_self_f(arg, **kwarg):
     return siggi.grid_results(*arg, **kwarg)
 
@@ -38,8 +39,13 @@ class siggi(object):
         self.filt_wave_range = np.linspace(filt_min, filt_max, filt_steps)
 
         dim_list = [len(self.filt_wave_range) for i in range(num_filters)]
+
+        self.width_list = None
+
         if adjust_widths is True:
             dim_list.insert(0, width_steps)
+            self.width_list = np.linspace(width_min, width_max, width_steps)
+
         if adjust_width_ratio is True:
             dim_list.insert(0, ratio_steps)
 
@@ -69,11 +75,15 @@ class siggi(object):
 
         step_indices = np.unravel_index(idx, dim_list)
 
-        filt_centers = [self.filt_wave_range[filt_idx] 
-                        for filt_idx in step_indices]
+        if self.width_list is None:
+            filt_centers = [self.filt_wave_range[filt_idx] 
+                            for filt_idx in step_indices]
+        else:
+            filt_centers = [self.filt_wave_range[filt_idx] 
+                            for filt_idx in step_indices[1:]]
 
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1] 
-                    for idx in range(1, len(filt_centers))]
+                      for idx in range(1, len(filt_centers))]
         filt_diffs = np.array(filt_diffs, dtype=np.int)
         
         if np.min(filt_diffs) < 0:
@@ -82,8 +92,14 @@ class siggi(object):
         f = filters(self.filt_wave_range[0] - width_max,
                     self.filt_wave_range[-1] + width_max)
 
-        filt_dict = f.trap_filters([[filt_loc, 120, 60]
-                                    for filt_loc in filt_centers])
+        if self.width_list is None:
+            filt_dict = f.trap_filters([[filt_loc, 120, 60]
+                                        for filt_loc in filt_centers])
+        else:
+            filt_dict = f.trap_filters([[filt_loc, 
+                                         self.width_list[step_indices[0]],
+                                         0.5*self.width_list[step_indices[0]]]
+                                        for filt_loc in filt_centers])
 
         c = calcIG(filt_dict, self.shift_seds, self.z_prior, self.z_min,
                    self.z_max, self.z_steps, snr=snr_level)
