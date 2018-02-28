@@ -44,9 +44,14 @@ class siggi(object):
         dim_list = [len(self.filt_wave_range) for i in range(num_filters)]
 
         self.width_list = None
+<<<<<<< HEAD
         self.ratio_list = None
         self.default_width = default_width
         self.default_ratio = default_ratio
+=======
+        self.width_max = width_max
+        self.snr_level = snr_level
+>>>>>>> 84cd31a... Trying skopt.
 
         if adjust_widths is True:
             dim_list.insert(0, width_steps)
@@ -59,6 +64,15 @@ class siggi(object):
         num_points = reduce((lambda x, y: x*y), dim_list)
 
         step_on = 0
+
+        # pool = mp.Pool(processes=procs)
+
+        # pool_res = pool.map(unwrap_self_f, zip([self]*num_points, 
+        #                                        [[idx, dim_list, width_max,
+        #                                          snr_level]
+        #                                         for idx in range(num_points)]))
+
+        dim_list = [(300., 1200.) for n in range(num_filters)]
 
         # pool = mp.Pool(processes=procs)
 
@@ -83,22 +97,17 @@ class siggi(object):
     def grid_results(self, filt_params):
 
         filt_width = filt_params[0]
+
         filt_centers = filt_params[1:]
 
         # step_indices = np.unravel_index(idx, dim_list)
 
-        if idx % reduce((lambda x, y: x*y), dim_list[-2:]) == 0:
-            print(step_indices)
-
-        if ((self.width_list is None) and (self.ratio_list is None)):
-            filt_centers = [self.filt_wave_range[filt_idx] 
-                            for filt_idx in step_indices]
-        elif ((self.ratio_list is None) | (self.width_list is None)):
-            filt_centers = [self.filt_wave_range[filt_idx] 
-                            for filt_idx in step_indices[1:]]
-        else:
-            filt_centers = [self.filt_wave_range[filt_idx]
-                            for filt_idx in step_indices[2:]]
+        # if self.width_list is None:
+        #     filt_centers = [self.filt_wave_range[filt_idx] 
+        #                     for filt_idx in step_indices]
+        # else:
+            # filt_centers = [self.filt_wave_range[filt_idx] 
+            #                 for filt_idx in step_indices[1:]]
 
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1] 
                       for idx in range(1, len(filt_centers))]
@@ -110,29 +119,17 @@ class siggi(object):
         f = filters(self.filt_wave_range[0] - self.width_max,
                     self.filt_wave_range[-1] + self.width_max)
 
-        if ((self.width_list is None) and (self.ratio_list is None)):
-            filt_dict = f.trap_filters([[filt_loc, self.default_width,
-                                         self.default_ratio*self.default_width]
-                                        for filt_loc in filt_centers])
-        elif self.ratio_list is None:
-            filt_dict = f.trap_filters([[filt_loc, 
-                                         self.width_list[step_indices[0]],
-                                         self.default_ratio *
-                                         self.width_list[step_indices[0]]]
-                                        for filt_loc in filt_centers])
-        elif self.width_list is None:
-            filt_dict = f.trap_filters([[filt_loc, self.default_width,
-                                         self.ratio_list[step_indices[0]] *
-                                         self.default_width]
-                                        for filt_loc in filt_centers])
-        else:
-            filt_dict = f.trap_filters([[filt_loc, 
-                                         self.width_list[step_indices[1]],
-                                        self.ratio_list[step_indices[0]] *
-                                        self.width_list[step_indices[1]]]
+        # if self.width_list is None:
+        #     filt_dict = f.trap_filters([[filt_loc, 120, 60]
+        #                                 for filt_loc in filt_centers])
+        # else:
+        filt_dict = f.trap_filters([[filt_loc, 
+                                         filt_width,
+                                         0.5*filt_width]
                                         for filt_loc in filt_centers])
 
-        c = calcIG(filt_dict, self.shift_seds, self.z_probs, snr=snr_level)
-        step_result = c.calc_IG()
+        c = calcIG(filt_dict, self.shift_seds, self.z_prior, self.z_min,
+                   self.z_max, self.z_steps, snr=self.snr_level)
+        step_result = -1.*c.calc_IG()
 
         return step_result
