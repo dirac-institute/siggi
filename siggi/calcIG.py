@@ -87,9 +87,14 @@ class calcIG(object):
         rv = stats.multivariate_normal
 
         y_vals = []
+<<<<<<< 70d649800b83ba588e558ea10b6d6428734f40d7
         y_distances = []
         num_points = 5000
         x_total = np.zeros((num_seds*num_points, num_colors))
+=======
+        num_points = 100
+        x_total = np.zeros((len(y_range)*num_points))
+>>>>>>> Trying skopt.
 
         for idx in range(num_seds):
 
