@@ -89,19 +89,16 @@ class calcIG(object):
 
         rv = stats.multivariate_normal
 
-        x_total = None
         y_vals = []
-        num_points = 100
+        num_points = 1000
+        x_total = np.zeros((len(y_range)*num_points))
 
         for idx in range(len(y_range)):
 
             y_samples = rv.rvs(mean=colors[idx], cov=np.diagflat(errors[idx]),
                                size=num_points)
 
-            if x_total is None:
-                x_total = y_samples
-            else:
-                x_total = np.concatenate((x_total, y_samples))
+            x_total[idx*num_points:(idx+1)*num_points] = y_samples
 
             y_vals.append(y_samples)
 
