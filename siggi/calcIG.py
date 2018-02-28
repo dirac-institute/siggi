@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 from sklearn.neighbors.kde import KernelDensity
 from scipy import stats
-from . import Sed, Bandpass, PhotometricParameters
+from . import Sed, Bandpass
 __all__ = ["calcIG"]
 
 
@@ -15,7 +15,7 @@ class calcIG(object):
     """
 
     def __init__(self, filter_dict, sed_list, prior_func,
-                 y_min, y_max, y_step, snr=5.):
+                 y_min, y_max, y_steps, snr=5.):
 
         self._filter_dict = filter_dict
         self._sed_list = []
@@ -40,7 +40,7 @@ class calcIG(object):
 
         self.y_min = y_min
         self.y_max = y_max
-        self.y_step = y_step
+        self.y_steps = y_steps
 
         self.snr = snr
 
@@ -67,9 +67,7 @@ class calcIG(object):
 
     def calc_h(self):
 
-        y_range = np.arange(self.y_min + 0.5*self.y_step,
-                            self.y_max + 0.75*self.y_step,
-                            self.y_step)
+        y_range = np.linspace(self.y_min, self.y_max, self.y_steps)
         sed_probs = self.prior(y_range)
 
         h_sum = 0
@@ -82,9 +80,7 @@ class calcIG(object):
 
     def calc_hyx(self, colors, errors):
 
-        y_range = np.arange(self.y_min,
-                            self.y_max + 0.5*self.y_step,
-                            self.y_step)
+        y_range = np.linspace(self.y_min, self.y_max, self.y_steps)
         sed_probs = self.prior(y_range)
 
         hyx_sum = 0

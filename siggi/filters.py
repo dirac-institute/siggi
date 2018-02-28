@@ -11,7 +11,7 @@ class filters(object):
     a Bandpass dictionary.
     """
 
-    def __init__(self, wavelen_min=300, wavelen_max=1500, wavelen_step=0.1):
+    def __init__(self, wavelen_min=200., wavelen_max=1500., wavelen_step=0.1):
 
         self.wavelen_min = wavelen_min
         self.wavelen_max = wavelen_max
