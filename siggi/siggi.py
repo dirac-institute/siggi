@@ -81,6 +81,9 @@ class siggi(object):
 
         step_indices = np.unravel_index(idx, dim_list)
 
+        if idx % reduce((lambda x, y: x*y), dim_list[2:]) == 0:
+            print(step_indices)
+
         if ((self.width_list is None) and (self.ratio_list is None)):
             filt_centers = [self.filt_wave_range[filt_idx] 
                             for filt_idx in step_indices]
