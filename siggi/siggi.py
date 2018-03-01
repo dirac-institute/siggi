@@ -32,9 +32,10 @@ class siggi(object):
 
     def optimize_filters(self, filt_min=300., filt_max=1200., filt_steps=10,
                          snr_level=5., num_filters=6, filter_type='trap',
+                         default_width=120., default_ratio=0.5,
                          adjust_widths=False, width_min=30., width_max=120.,
                          width_steps=10, adjust_width_ratio=False, 
-                         ratio_min=0.1, ratio_max=1.0, ratio_steps=10,
+                         ratio_min=0.5, ratio_max=0.9, ratio_steps=10,
                          procs=4):
 
         self.filt_wave_range = np.linspace(filt_min, filt_max, filt_steps)
@@ -42,6 +43,9 @@ class siggi(object):
         dim_list = [len(self.filt_wave_range) for i in range(num_filters)]
 
         self.width_list = None
+        self.ratio_list = None
+        self.default_width = default_width
+        self.default_ratio = default_ratio
 
         if adjust_widths is True:
             dim_list.insert(0, width_steps)
@@ -49,6 +53,7 @@ class siggi(object):
 
         if adjust_width_ratio is True:
             dim_list.insert(0, ratio_steps)
+            self.ratio_list = np.linspace(ratio_min, ratio_max, ratio_steps)
 
         num_points = reduce((lambda x, y: x*y), dim_list)
 
@@ -76,30 +81,46 @@ class siggi(object):
 
         step_indices = np.unravel_index(idx, dim_list)
 
-        if self.width_list is None:
+        if ((self.width_list is None) and (self.ratio_list is None)):
             filt_centers = [self.filt_wave_range[filt_idx] 
                             for filt_idx in step_indices]
-        else:
+        elif ((self.ratio_list is None) | (self.width_list is None)):
             filt_centers = [self.filt_wave_range[filt_idx] 
                             for filt_idx in step_indices[1:]]
+        else:
+            filt_centers = [self.filt_wave_range[filt_idx]
+                            for filt_idx in step_indices[2:]]
 
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1] 
                       for idx in range(1, len(filt_centers))]
         filt_diffs = np.array(filt_diffs, dtype=np.int)
-        
+
         if np.min(filt_diffs) < 0:
             return 0.
 
         f = filters(self.filt_wave_range[0] - width_max,
                     self.filt_wave_range[-1] + width_max)
 
-        if self.width_list is None:
-            filt_dict = f.trap_filters([[filt_loc, 120, 60]
+        if ((self.width_list is None) and (self.ratio_list is None)):
+            filt_dict = f.trap_filters([[filt_loc, self.default_width,
+                                         self.default_ratio*self.default_width]
+                                        for filt_loc in filt_centers])
+        elif self.ratio_list is None:
+            filt_dict = f.trap_filters([[filt_loc, 
+                                         self.width_list[step_indices[0]],
+                                         self.default_ratio *
+                                         self.width_list[step_indices[0]]]
+                                        for filt_loc in filt_centers])
+        elif self.width_list is None:
+            filt_dict = f.trap_filters([[filt_loc, self.default_width,
+                                         self.ratio_list[step_indices[0]] *
+                                         self.default_width]
                                         for filt_loc in filt_centers])
         else:
             filt_dict = f.trap_filters([[filt_loc, 
-                                         self.width_list[step_indices[0]],
-                                         0.5*self.width_list[step_indices[0]]]
+                                         self.width_list[step_indices[1]],
+                                        self.ratio_list[step_indices[0]] *
+                                        self.width_list[step_indices[1]]]
                                         for filt_loc in filt_centers])
 
         c = calcIG(filt_dict, self.shift_seds, self.z_prior, self.z_min,

@@ -91,14 +91,15 @@ class calcIG(object):
 
         y_vals = []
         num_points = 1000
-        x_total = np.zeros((len(y_range)*num_points))
+        x_total = np.zeros((len(y_range)*num_points, num_colors))
 
         for idx in range(len(y_range)):
 
             y_samples = rv.rvs(mean=colors[idx], cov=np.diagflat(errors[idx]),
                                size=num_points)
 
-            x_total[idx*num_points:(idx+1)*num_points] = y_samples
+            x_total[idx*num_points:(idx+1)*num_points] = \
+                y_samples.reshape(num_points, num_colors)
 
             y_vals.append(y_samples)
 
