@@ -15,20 +15,18 @@ class siggi(object):
     Class to run a complete siggi maximization run.
     """
 
-    def __init__(self, spec_list, z_prior, z_min=0., z_max=2.5, z_steps=51):
+    def __init__(self, spec_list, spec_weights, z_prior,
+                 z_min=0.05, z_max=2.5, z_steps=50):
 
         self.shift_seds = []
+        self.z_probs = []
 
-        for spec in spec_list:
+        for spec, weight in zip(spec_list, spec_weights):
             for z_val in np.linspace(z_min, z_max, z_steps):
                 spec_copy = deepcopy(spec)
                 spec_copy.redshiftSED(z_val)
                 self.shift_seds.append(spec_copy)
-
-        self.z_prior = z_prior
-        self.z_min = z_min
-        self.z_max = z_max
-        self.z_steps = z_steps
+                self.z_probs.append(z_prior(z_val)*weight)
 
     def optimize_filters(self, filt_min=300., filt_max=1200., filt_steps=10,
                          snr_level=5., num_filters=6, filter_type='trap',
@@ -81,7 +79,7 @@ class siggi(object):
 
         step_indices = np.unravel_index(idx, dim_list)
 
-        if idx % reduce((lambda x, y: x*y), dim_list[2:]) == 0:
+        if idx % reduce((lambda x, y: x*y), dim_list[-2:]) == 0:
             print(step_indices)
 
         if ((self.width_list is None) and (self.ratio_list is None)):
@@ -126,8 +124,7 @@ class siggi(object):
                                         self.width_list[step_indices[1]]]
                                         for filt_loc in filt_centers])
 
-        c = calcIG(filt_dict, self.shift_seds, self.z_prior, self.z_min,
-                   self.z_max, self.z_steps, snr=snr_level)
+        c = calcIG(filt_dict, self.shift_seds, self.z_probs, snr=snr_level)
         step_result = c.calc_IG()
 
         return step_result
