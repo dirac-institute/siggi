@@ -91,14 +91,12 @@ class calcIG(object):
 
         for idx in range(num_seds):
 
-            #y_samples = rv.rvs(mean=colors[idx], cov=np.diagflat(errors[idx]),
-            #                   size=num_points)
             y_samples = np.random.uniform(low=colors[idx]-5*errors[0][0],
                                           high=colors[idx]+5*errors[0][0],
                                           size=(num_points, num_colors))
 
             x_total[idx*num_points:(idx+1)*num_points] = \
-                y_samples  #.reshape(num_points, num_colors)
+                y_samples
 
             y_vals.append(y_samples)
 
@@ -106,41 +104,18 @@ class calcIG(object):
 
         x_dens = np.zeros(len(x_total))
 
-        y_dens_list = []
-
         for idx in range(num_seds):
             y_dens = sed_probs[idx]*rv.pdf(x_total, mean=colors[idx],
                                            cov=np.diagflat(errors[idx]))
             x_dens += y_dens
-            y_dens_list.append(y_dens)
-
-        total_points = len(x_total)
-        c_max = np.max(x_total)
-        c_min = np.min(x_total)
-        y_dens_list = np.array(y_dens_list)
-        #print(c_max, c_min, np.sum(y_dens)*errors[0][0]*10/total_points)
 
         for idx in range(num_seds):
 
-            #y_distances = cdist(x_total, [colors[idx]])
-            #y_distances = x_total - colors[idx]
-            #y_distances = np.max(np.abs(y_distances), axis=-1)
-            #print(np.shape(x_total), colors[idx])
-            #print(y_distances)
-            #y_keep = np.where(y_distances < 5.*errors[0][0])[0]
-            #print(len(y_keep))
-            #print(y_dens_list[idx])
-            #print(x_dens)
-            #print(np.sum(np.log2(y_dens_list[idx] / x_dens)))
-            #print(np.sum(y_dens_list[idx])/num_points)
-            #hyx_i = (errors[0][0]*10/total_points) * np.nansum(y_dens_list[idx] *
-            #                                      np.log2(y_dens_list[idx] /
-            #                                              x_dens))
-            # hyx_i = (errors[0][0]*20/len(y_keep)) * np.nansum((y_dens_list[idx] *
-            #                                       np.log2(y_dens_list[idx] /
-            #                                               x_dens))[y_keep])
-            hyx_i = ((errors[0][0]*10)**num_colors)/num_points * np.nansum((y_dens_list[idx, idx*num_points:(idx+1)*num_points] *
-                                                  np.log2(y_dens_list[idx, idx*num_points:(idx+1)*num_points] /
+            y_samp = x_total[idx*num_points:(idx+1)*num_points]
+            y_dens = sed_probs[idx]*rv.pdf(y_samp, mean=colors[idx],
+                                           cov=np.diagflat(errors[idx]))
+            hyx_i = ((errors[0][0]*10)**num_colors)/num_points * np.nansum((y_dens *
+                                                  np.log2(y_dens /
                                                           x_dens[idx*num_points:(idx+1)*num_points])))
             hyx_sum += hyx_i
 
