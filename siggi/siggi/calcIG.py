@@ -114,9 +114,10 @@ class calcIG(object):
             y_samp = x_total[idx*num_points:(idx+1)*num_points]
             y_dens = sed_probs[idx]*rv.pdf(y_samp, mean=colors[idx],
                                            cov=np.diagflat(errors[idx]))
-            hyx_i = ((errors[0][0]*10)**num_colors)/num_points * np.nansum((y_dens *
-                                                  np.log2(y_dens /
-                                                          x_dens[idx*num_points:(idx+1)*num_points])))
+            norm_factor = ((errors[0][0]*10)**num_colors)/num_points
+            hyx_i = norm_factor * np.nansum((y_dens * np.log2(y_dens /
+                                            x_dens[idx*num_points:(idx+1) *
+                                                   num_points])))
             hyx_sum += hyx_i
 
         return -1.*hyx_sum
