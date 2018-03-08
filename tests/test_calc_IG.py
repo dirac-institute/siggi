@@ -1,3 +1,5 @@
+import sys
+sys.path.append('..')
 import unittest
 import numpy as np
 from siggi import filters, spectra, calcIG
@@ -19,7 +21,7 @@ class testSiggi(unittest.TestCase):
         test_c = calcIG(trap_dict, [self.red_spec, self.blue_spec],
                         sed_probs, snr=5.)
         ig = test_c.calc_IG()
-        self.assertAlmostEqual(ig, 0., places=2)
+        self.assertAlmostEqual(ig, 0., delta=0.02)
 
     @classmethod
     def tearDownClass(cls):

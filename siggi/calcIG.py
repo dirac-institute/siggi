@@ -6,6 +6,7 @@ from sklearn.metrics.pairwise import pairwise_distances
 from scipy.spatial.distance import cdist
 from scipy import stats
 from . import Sed, Bandpass
+
 __all__ = ["calcIG"]
 
 

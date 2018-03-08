@@ -4,6 +4,8 @@ from copy import deepcopy
 from functools import reduce
 from . import filters, spectra, calcIG
 
+__all__ = ["siggi"]
+
 
 def unwrap_self_f(arg, **kwarg):
     return siggi.grid_results(*arg, **kwarg)
