@@ -2,9 +2,9 @@ from __future__ import division
 
 import numpy as np
 from sklearn.neighbors.kde import KernelDensity
-from sklearn.metrics.pairwise import pairwise_distances
 from scipy.spatial.distance import cdist
 from scipy import stats
+from scipy.special import gamma
 from . import Sed, Bandpass
 
 __all__ = ["calcIG"]
@@ -87,19 +87,29 @@ class calcIG(object):
         rv = stats.multivariate_normal
 
         y_vals = []
-        num_points = 10000
+        y_distances = []
+        num_points = 5000
         x_total = np.zeros((num_seds*num_points, num_colors))
 
         for idx in range(num_seds):
 
-            y_samples = np.random.uniform(low=colors[idx]-5*errors[0][0],
-                                          high=colors[idx]+5*errors[0][0],
-                                          size=(num_points, num_colors))
+            y_samples = rv.rvs(mean=colors[idx],
+                               cov=np.diagflat(errors[idx]),
+                               size=num_points)
+
+            y_samples = y_samples.reshape(num_points, num_colors)
+
+            y_dist = cdist(y_samples, [colors[idx]]).flatten()
+            y_sort = np.argsort(y_dist)
+            y_dist = y_dist[y_sort]
+            #y_dist[1:] = [y_dist[x+1] - y_dist[x] for x in range(num_points-1)]
+            y_samples = y_samples[y_sort]
 
             x_total[idx*num_points:(idx+1)*num_points] = \
                 y_samples
 
             y_vals.append(y_samples)
+            y_distances.append(y_dist)
 
         y_vals = np.array(y_vals)
 
@@ -115,10 +125,22 @@ class calcIG(object):
             y_samp = x_total[idx*num_points:(idx+1)*num_points]
             y_dens = sed_probs[idx]*rv.pdf(y_samp, mean=colors[idx],
                                            cov=np.diagflat(errors[idx]))
-            norm_factor = ((errors[0][0]*10)**num_colors)/num_points
-            hyx_i = norm_factor * np.nansum((y_dens * np.log2(y_dens /
-                                            x_dens[idx*num_points:(idx+1) *
-                                                   num_points])))
+
+            # norm_factor = ((errors[0][0]*10)**num_colors)/num_points
+            # norm_factor = np.pi*[]
+            norm_factor = (y_distances[idx][1:]**num_colors -
+                           y_distances[idx][:-1]**num_colors)
+            norm_factor = np.append((y_distances[idx][0]**num_colors), norm_factor)
+            norm_factor *= ((np.pi**(num_colors/2.))/gamma((num_colors/2.)+1))
+
+            hyx_i = np.nansum(norm_factor * (y_dens * np.log2(y_dens /
+                                                x_dens[idx*num_points:(idx+1) *
+                                                        num_points])))
+
+            # hyx_i = norm_factor * np.nansum((y_dens * np.log2(y_dens /
+            #                                 x_dens[idx*num_points:(idx+1) *
+            #                                        num_points])))
+
             hyx_sum += hyx_i
 
         return -1.*hyx_sum

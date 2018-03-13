@@ -21,7 +21,7 @@ class testSiggi(unittest.TestCase):
         test_c = calcIG(trap_dict, [self.red_spec, self.blue_spec],
                         sed_probs, snr=5.)
         ig = test_c.calc_IG()
-        self.assertAlmostEqual(ig, 0., delta=0.02)
+        self.assertAlmostEqual(ig, 0., delta=0.01)
 
     @classmethod
     def tearDownClass(cls):
