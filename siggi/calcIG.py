@@ -87,22 +87,27 @@ class calcIG(object):
 
         y_vals = []
         y_distances = []
-        num_points = 1000
+        num_points = 5000
         x_total = np.zeros((num_seds*num_points, num_colors))
 
         for idx in range(num_seds):
 
             y_samples = rv.rvs(mean=colors[idx],
                                cov=np.diagflat(errors[idx]),
-                               size=(num_points+1, num_colors))
+                               size=num_points)
 
-            y_samples = np.sort(y_samples)
-            y_dist = [y_samples[x+1] - y_samples[x] for x in range(num_points)]
+            y_samples = y_samples.reshape(num_points, num_colors)
+
+            y_dist = cdist(y_samples, [colors[idx]]).flatten()
+            y_sort = np.argsort(y_dist)
+            y_dist = y_dist[y_sort]
+            y_dist[1:] = [y_dist[x+1] - y_dist[x] for x in range(num_points-1)]
+            y_samples = y_samples[y_sort]
 
             x_total[idx*num_points:(idx+1)*num_points] = \
-                y_samples[1:].reshape(num_points, num_colors)
+                y_samples
 
-            y_vals.append(y_samples[1:])
+            y_vals.append(y_samples)
             y_distances.append(y_dist)
 
         y_vals = np.array(y_vals)
@@ -121,8 +126,9 @@ class calcIG(object):
                                            cov=np.diagflat(errors[idx]))
             
             # norm_factor = ((errors[0][0]*10)**num_colors)/num_points
+            # norm_factor = np.pi*[]
 
-            hyx_i = np.nansum(y_distances[idx] * (y_dens * np.log2(y_dens /
+            hyx_i = 2*np.nansum(y_distances[idx] * (y_dens * np.log2(y_dens /
                                              x_dens[idx*num_points:(idx+1) *
                                                     num_points])))
 
