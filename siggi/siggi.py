@@ -59,8 +59,6 @@ class siggi(object):
 
         step_on = 0
 
-        processes = []
-
         pool = mp.Pool(processes=procs)
 
         pool_res = pool.map(unwrap_self_f, zip([self]*num_points, 
@@ -98,7 +96,7 @@ class siggi(object):
                       for idx in range(1, len(filt_centers))]
         filt_diffs = np.array(filt_diffs, dtype=np.int)
 
-        if np.min(filt_diffs) < 0:
+        if np.min(filt_diffs) <= 0:
             return 0.
 
         f = filters(self.filt_wave_range[0] - width_max,
