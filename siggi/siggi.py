@@ -45,6 +45,8 @@ class siggi(object):
         self.default_ratio = default_ratio
         self.width_max = width_max
         self.snr_level = snr_level
+        self.filt_min = filt_min
+        self.filt_max = filt_max
 
         dim_list = [(filt_min, filt_max) for n in range(num_filters)]
         x0 = list(np.linspace(filt_min, filt_max, num_filters))
@@ -82,8 +84,8 @@ class siggi(object):
         if np.min(filt_diffs) <= 0:
             return 0.
 
-        f = filters(self.filt_wave_range[0] - self.width_max,
-                    self.filt_wave_range[-1] + self.width_max)
+        f = filters(self.filt_min - self.width_max,
+                    self.filt_max + self.width_max)
 
         if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
