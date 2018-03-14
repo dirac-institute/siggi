@@ -39,8 +39,6 @@ class siggi(object):
                          ratio_min=0.5, ratio_max=0.9,
                          procs=4, n_opt_points=100):
 
-        dim_list = [len(self.filt_wave_range) for i in range(num_filters)]
-
         self.adjust_widths = adjust_widths
         self.adjust_ratios = adjust_width_ratio
         self.default_width = default_width
