@@ -86,8 +86,9 @@ class calcIG(object):
         rv = stats.multivariate_normal
 
         y_vals = []
-        num_points = 100
-        x_total = np.zeros((len(y_range)*num_points))
+        y_distances = []
+        num_points = 5000
+        x_total = np.zeros((num_seds*num_points, num_colors))
 
         for idx in range(num_seds):
 
