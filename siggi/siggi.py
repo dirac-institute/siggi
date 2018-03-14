@@ -39,8 +39,6 @@ class siggi(object):
                          ratio_min=0.5, ratio_max=0.9,
                          procs=4, n_opt_points=100):
 
-        self.filt_wave_range = np.linspace(filt_min, filt_max, filt_steps)
-
         dim_list = [len(self.filt_wave_range) for i in range(num_filters)]
 
         self.adjust_widths = adjust_widths
