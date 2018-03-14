@@ -44,16 +44,9 @@ class siggi(object):
         dim_list = [len(self.filt_wave_range) for i in range(num_filters)]
 
         self.width_list = None
-<<<<<<< 70d649800b83ba588e558ea10b6d6428734f40d7
         self.ratio_list = None
         self.default_width = default_width
         self.default_ratio = default_ratio
-=======
-        self.width_max = width_max
-        self.snr_level = snr_level
->>>>>>> Trying skopt.
-
-        self.adjust_widths = adjust_widths
 
         if adjust_widths is True:
             dim_list.insert(0, width_steps)
@@ -67,13 +60,7 @@ class siggi(object):
 
         step_on = 0
 
-<<<<<<< 70d649800b83ba588e558ea10b6d6428734f40d7
-        pool = mp.Pool(processes=procs)
-=======
-        processes = []
-
         # pool = mp.Pool(processes=procs)
->>>>>>> Trying skopt.
 
         # pool_res = pool.map(unwrap_self_f, zip([self]*num_points, 
         #                                        [[idx, dim_list, width_max,
@@ -82,9 +69,7 @@ class siggi(object):
 
         dim_list = [(300., 1200.) for n in range(num_filters)]
 
-        if self.adjust_widths is True:
-            dim_list.insert(0, (30., 120.))
-
+        dim_list.insert(0, (30., 120.))
         print(dim_list)
 
         res = gp_minimize(self.grid_results, dim_list, n_jobs=-1)
@@ -97,15 +82,11 @@ class siggi(object):
 
     def grid_results(self, filt_params):
 
-        if self.adjust_widths is True:
-            filt_width = filt_params[0]
-            filt_centers = filt_params[1:]
-        else:
-            filt_centers = filt_params
+        filt_width = filt_params[0]
+        filt_centers = filt_params[1:]
 
         # step_indices = np.unravel_index(idx, dim_list)
 
-<<<<<<< 70d649800b83ba588e558ea10b6d6428734f40d7
         if idx % reduce((lambda x, y: x*y), dim_list[-2:]) == 0:
             print(step_indices)
 
@@ -118,14 +99,6 @@ class siggi(object):
         else:
             filt_centers = [self.filt_wave_range[filt_idx]
                             for filt_idx in step_indices[2:]]
-=======
-        # if self.width_list is None:
-        #     filt_centers = [self.filt_wave_range[filt_idx] 
-        #                     for filt_idx in step_indices]
-        # else:
-            # filt_centers = [self.filt_wave_range[filt_idx] 
-            #                 for filt_idx in step_indices[1:]]
->>>>>>> Trying skopt.
 
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1] 
                       for idx in range(1, len(filt_centers))]
@@ -137,8 +110,6 @@ class siggi(object):
         f = filters(self.filt_wave_range[0] - self.width_max,
                     self.filt_wave_range[-1] + self.width_max)
 
-<<<<<<< 798854e091299db3ab9c40e881fd42adf752459f
-<<<<<<< 70d649800b83ba588e558ea10b6d6428734f40d7
         if ((self.width_list is None) and (self.ratio_list is None)):
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
                                          self.default_ratio*self.default_width]
@@ -163,28 +134,5 @@ class siggi(object):
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs, snr=snr_level)
         step_result = c.calc_IG()
-=======
-        # if self.width_list is None:
-        #     filt_dict = f.trap_filters([[filt_loc, 120, 60]
-        #                                 for filt_loc in filt_centers])
-        # else:
-        filt_dict = f.trap_filters([[filt_loc, 
-                                         filt_width,
-                                         0.5*filt_width]
-=======
-        if self.adjust_widths is not True:
-            filt_dict = f.trap_filters([[filt_loc, 120, 60]
->>>>>>> Making filt_widths optional in skopt.
-                                        for filt_loc in filt_centers])
-        else:
-            filt_dict = f.trap_filters([[filt_loc, 
-                                            filt_width,
-                                            0.5*filt_width]
-                                            for filt_loc in filt_centers])
-
-        c = calcIG(filt_dict, self.shift_seds, self.z_prior, self.z_min,
-                   self.z_max, self.z_steps, snr=self.snr_level)
-        step_result = -1.*c.calc_IG()
->>>>>>> Trying skopt.
 
         return step_result
