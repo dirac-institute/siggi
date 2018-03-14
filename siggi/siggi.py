@@ -44,9 +44,16 @@ class siggi(object):
         dim_list = [len(self.filt_wave_range) for i in range(num_filters)]
 
         self.width_list = None
+<<<<<<< HEAD
         self.ratio_list = None
         self.default_width = default_width
         self.default_ratio = default_ratio
+=======
+        self.width_max = width_max
+        self.snr_level = snr_level
+
+        self.adjust_widths = adjust_widths
+>>>>>>> a01646b7e9981c81b73fdae2f4d57c087c6a27e7
 
         if adjust_widths is True:
             dim_list.insert(0, width_steps)
@@ -69,6 +76,7 @@ class siggi(object):
 
         dim_list = [(300., 1200.) for n in range(num_filters)]
 
+<<<<<<< HEAD
         dim_list.insert(0, (30., 120.))
         print(dim_list)
 
@@ -77,9 +85,23 @@ class siggi(object):
         # result_grid = np.reshape(pool_res, dim_list)
 
         result_grid = res
+=======
+        # pool = mp.Pool(processes=procs)
 
-        return result_grid
+        # pool_res = pool.map(unwrap_self_f, zip([self]*num_points, 
+        #                                        [[idx, dim_list, width_max,
+        #                                          snr_level]
+        #                                         for idx in range(num_points)]))
 
+        dim_list = [(300., 1200.) for n in range(num_filters)]
+>>>>>>> a01646b7e9981c81b73fdae2f4d57c087c6a27e7
+
+        if self.adjust_widths is True:
+            dim_list.insert(0, (30., 120.))
+
+        print(dim_list)
+
+<<<<<<< HEAD
     def grid_results(self, filt_params):
 
         filt_width = filt_params[0]
@@ -99,6 +121,32 @@ class siggi(object):
         else:
             filt_centers = [self.filt_wave_range[filt_idx]
                             for filt_idx in step_indices[2:]]
+=======
+        res = gp_minimize(self.grid_results, dim_list, n_jobs=-1)
+
+        # result_grid = np.reshape(pool_res, dim_list)
+
+        result_grid = res
+
+        return result_grid
+
+    def grid_results(self, filt_params):
+
+        if self.adjust_widths is True:
+            filt_width = filt_params[0]
+            filt_centers = filt_params[1:]
+        else:
+            filt_centers = filt_params
+
+        # step_indices = np.unravel_index(idx, dim_list)
+
+        # if self.width_list is None:
+        #     filt_centers = [self.filt_wave_range[filt_idx] 
+        #                     for filt_idx in step_indices]
+        # else:
+            # filt_centers = [self.filt_wave_range[filt_idx] 
+            #                 for filt_idx in step_indices[1:]]
+>>>>>>> a01646b7e9981c81b73fdae2f4d57c087c6a27e7
 
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1] 
                       for idx in range(1, len(filt_centers))]
@@ -110,12 +158,18 @@ class siggi(object):
         f = filters(self.filt_wave_range[0] - self.width_max,
                     self.filt_wave_range[-1] + self.width_max)
 
+<<<<<<< HEAD
         if ((self.width_list is None) and (self.ratio_list is None)):
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
                                          self.default_ratio*self.default_width]
+=======
+        if self.adjust_widths is not True:
+            filt_dict = f.trap_filters([[filt_loc, 120, 60]
+>>>>>>> a01646b7e9981c81b73fdae2f4d57c087c6a27e7
                                         for filt_loc in filt_centers])
         elif self.ratio_list is None:
             filt_dict = f.trap_filters([[filt_loc, 
+<<<<<<< HEAD
                                          self.width_list[step_indices[0]],
                                          self.default_ratio *
                                          self.width_list[step_indices[0]]]
@@ -134,5 +188,14 @@ class siggi(object):
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs, snr=snr_level)
         step_result = c.calc_IG()
+=======
+                                            filt_width,
+                                            0.5*filt_width]
+                                            for filt_loc in filt_centers])
+
+        c = calcIG(filt_dict, self.shift_seds, self.z_prior, self.z_min,
+                   self.z_max, self.z_steps, snr=self.snr_level)
+        step_result = -1.*c.calc_IG()
+>>>>>>> a01646b7e9981c81b73fdae2f4d57c087c6a27e7
 
         return step_result
