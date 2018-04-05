@@ -60,19 +60,26 @@ class filters(object):
 
             climb_width = (band[1] - band[2])/2.
             # TODO: Fix this for top hat filter which fails when climb_width=0.
-            slope = 1./climb_width
-            climb_values = np.array([slope*i for i in
-                                     np.arange(0, climb_width+offset,
-                                               self.wavelen_step)])
+            if climb_width > 0.:
+                slope = 1./climb_width
+                climb_values = np.array([slope*i for i in
+                                        np.arange(0, climb_width+offset,
+                                                self.wavelen_step)])
 
-            climb_steps = len(climb_values)
+                climb_steps = len(climb_values)
+            else:
+                climb_steps = 0
+
             min_idx = np.where(wavelen_arr >=
                                (band[0]-(band[1]/2.)-offset))[0][0]
             max_idx = np.where(wavelen_arr >=
                                (band[0]+(band[1]/2.)+offset))[0][0]
+            
             sb[min_idx:max_idx] = 1.0
-            sb[min_idx:min_idx+climb_steps] = climb_values
-            sb[max_idx-climb_steps:max_idx] = 1. - climb_values
+
+            if climb_steps > 0:
+                sb[min_idx:min_idx+climb_steps] = climb_values
+                sb[max_idx-climb_steps:max_idx] = 1. - climb_values
 
             bp_object = Bandpass(wavelen=wavelen_arr, sb=sb)
 

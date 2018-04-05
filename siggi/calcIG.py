@@ -33,11 +33,6 @@ class calcIG(object):
             f_norm = sed_copy.calcFluxNorm(18.0, imsimBand)
             sed_copy.multiplyFluxNorm(f_norm)
             self._sed_list.append(sed_copy)
-        self._flat_sed = Sed()
-        self._flat_sed.setFlatSED(wavelen_min=99., wavelen_max=1500.)
-        f_norm = self._flat_sed.calcFluxNorm(18.0, imsimBand)
-        self._flat_sed.multiplyFluxNorm(f_norm)
-        self._flat_sed.resampleSED(wavelen_match=self._sed_list[0].wavelen)
 
         self.sed_probs = np.array(sed_probs)
 
@@ -58,13 +53,17 @@ class calcIG(object):
             sed_mags = self._filter_dict.magListForSed(sed_obj)
             if np.isnan(sed_mags[0]):
                 print(sed_mags)
-            sed_colors.append([sed_mags[i] - sed_mags[i-1]
+            sed_colors.append([sed_mags[i] - sed_mags[i+1]
                                for i in range(len(sed_mags) - 1)])
             color_errors.append([color_error for i in range(len(sed_mags)-1)])
 
         return np.array(sed_colors), np.array(color_errors)
 
     def calc_h(self):
+
+        """
+        Calculates the total entropy of the set of SEDs and redshifts.
+        """
 
         sed_probs = self.sed_probs
 
