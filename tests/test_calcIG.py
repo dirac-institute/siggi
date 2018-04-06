@@ -89,6 +89,7 @@ class testSiggi(unittest.TestCase):
 
     def test_calcIG(self):
 
+        # With same filter should be zero information gain. All colors = 0
         trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60],
                                          [800., 120, 60], [800., 120, 60],
                                          [800., 120, 60], [800., 120, 60]])
@@ -97,8 +98,16 @@ class testSiggi(unittest.TestCase):
                                     self.red_spec_z_1, self.blue_spec_z_1],
                         sed_probs, snr=2.)
         ig = test_c.calc_IG()
-        print(ig)
         self.assertAlmostEqual(ig, 0., delta=0.01)
+
+        # At very high signal to noise information gain should be perfect
+        trap_dict_2 = self.f.trap_filters([[400., 120, 60], [600., 120, 60],
+                                           [800., 120, 60]])
+        sed_probs_2 = [0.5, 0.5]
+        test_c_2 = calcIG(trap_dict_2, [self.red_spec, self.blue_spec],
+                          sed_probs_2, snr=100.)
+        ig_2 = test_c_2.calc_IG()
+        self.assertAlmostEqual(ig_2, 1.0, delta=0.01)
 
     @classmethod
     def tearDownClass(cls):
