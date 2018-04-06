@@ -16,6 +16,10 @@ class testSiggi(unittest.TestCase):
         s = spectra()
         cls.red_spec = s.get_red_spectrum()
         cls.blue_spec = s.get_blue_spectrum()
+        cls.red_spec_z_1 = deepcopy(cls.red_spec)
+        cls.red_spec_z_1.redshiftSED(1.)
+        cls.blue_spec_z_1 = deepcopy(cls.blue_spec)
+        cls.blue_spec_z_1.redshiftSED(1.)
 
     def test_calc_colors(self):
 
@@ -85,11 +89,15 @@ class testSiggi(unittest.TestCase):
 
     def test_calcIG(self):
 
-        trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60]])
-        sed_probs = [0.5, 0.5]
-        test_c = calcIG(trap_dict, [self.red_spec, self.blue_spec],
+        trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60],
+                                         [800., 120, 60], [800., 120, 60],
+                                         [800., 120, 60], [800., 120, 60]])
+        sed_probs = [0.25, 0.25, 0.25, 0.25]
+        test_c = calcIG(trap_dict, [self.red_spec, self.blue_spec,
+                                    self.red_spec_z_1, self.blue_spec_z_1],
                         sed_probs, snr=2.)
         ig = test_c.calc_IG()
+        print(ig)
         self.assertAlmostEqual(ig, 0., delta=0.01)
 
     @classmethod
