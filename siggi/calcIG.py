@@ -34,7 +34,7 @@ class calcIG(object):
             sed_copy.multiplyFluxNorm(f_norm)
             self._sed_list.append(sed_copy)
 
-        self.sed_probs = np.array(sed_probs)
+        self.sed_probs = np.array(sed_probs)/np.sum(self.sed_probs)
 
         self.snr = snr
 
@@ -93,7 +93,7 @@ class calcIG(object):
         for idx in range(num_seds):
 
             y_samples = rv.rvs(mean=colors[idx],
-                               cov=np.diagflat(errors[idx]),
+                               cov=np.diagflat(errors[idx]**2.),
                                size=num_points)
 
             y_samples = y_samples.reshape(num_points, num_colors)
@@ -116,14 +116,14 @@ class calcIG(object):
 
         for idx in range(num_seds):
             y_dens = sed_probs[idx]*rv.pdf(x_total, mean=colors[idx],
-                                           cov=np.diagflat(errors[idx]))
+                                           cov=np.diagflat(errors[idx])**2.)
             x_dens += y_dens
 
         for idx in range(num_seds):
 
             y_samp = x_total[idx*num_points:(idx+1)*num_points]
             y_dens = sed_probs[idx]*rv.pdf(y_samp, mean=colors[idx],
-                                           cov=np.diagflat(errors[idx]))
+                                           cov=np.diagflat(errors[idx])**2.)
 
             # norm_factor = ((errors[0][0]*10)**num_colors)/num_points
             # norm_factor = np.pi*[]
