@@ -19,8 +19,8 @@ class calcIG(object):
     and calculate the information gain.
     """
 
-    def __init__(self, filter_dict, sed_list, sed_probs,
-                 ref_filter=None, snr=5.):
+    def __init__(self, filter_dict, sed_list, sed_probs, sed_mags=22.0,
+                 sky_mag=19.0, ref_filter=None):
 
         self._filter_dict = filter_dict
         self._sed_list = []
@@ -33,19 +33,17 @@ class calcIG(object):
             if ref_filter is None:
                 ref_filter = Bandpass()
                 ref_filter.imsimBandpass()
-            f_norm = sed_copy.calcFluxNorm(22.0, ref_filter)
+            f_norm = sed_copy.calcFluxNorm(sed_mags, ref_filter)
             sed_copy.multiplyFluxNorm(f_norm)
             self._sed_list.append(sed_copy)
 
         self.sky_spec = spectra().get_dark_sky_spectrum()
-        sky_fn = self.sky_spec.calcFluxNorm(19.0, ref_filter)
+        sky_fn = self.sky_spec.calcFluxNorm(sky_mag, ref_filter)
         self.sky_spec.multiplyFluxNorm(sky_fn)
 
         self.phot_params = PhotometricParameters()
 
         self.sed_probs = np.array(sed_probs)/np.sum(sed_probs)
-
-        self.snr = snr
 
         return
 
@@ -147,7 +145,6 @@ class calcIG(object):
                                              x_dens[idx*num_points:(idx+1) *
                                                     num_points])))
             hyx_sum += hyx_i
-            print(hyx_i, hyx_sum)
 
         return -1.*hyx_sum
 
