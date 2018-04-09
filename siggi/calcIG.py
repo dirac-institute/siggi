@@ -5,7 +5,9 @@ from sklearn.neighbors.kde import KernelDensity
 from scipy.spatial.distance import cdist
 from scipy import stats
 from scipy.special import gamma
-from . import Sed, Bandpass
+from . import Sed, Bandpass, spectra
+from lsst_utils import calcMagError_sed
+from lsst_utils import PhotometricParameters
 
 __all__ = ["calcIG"]
 
@@ -18,7 +20,7 @@ class calcIG(object):
     """
 
     def __init__(self, filter_dict, sed_list, sed_probs,
-                 snr=5.):
+                 ref_filter=None, snr=5.):
 
         self._filter_dict = filter_dict
         self._sed_list = []
@@ -28,13 +30,20 @@ class calcIG(object):
                             flambda=sed_obj.flambda)
             sed_copy.resampleSED(wavelen_match=filter_dict.values()[0].wavelen)
             sed_copy.flambda[np.where(np.isnan(sed_copy.flambda))] = 0.
-            imsimBand = Bandpass()
-            imsimBand.imsimBandpass()
-            f_norm = sed_copy.calcFluxNorm(18.0, imsimBand)
+            if ref_filter is None:
+                ref_filter = Bandpass()
+                ref_filter.imsimBandpass()
+            f_norm = sed_copy.calcFluxNorm(22.0, ref_filter)
             sed_copy.multiplyFluxNorm(f_norm)
             self._sed_list.append(sed_copy)
 
-        self.sed_probs = np.array(sed_probs)/np.sum(self.sed_probs)
+        self.sky_spec = spectra().get_dark_sky_spectrum()
+        sky_fn = self.sky_spec.calcFluxNorm(19.0, ref_filter)
+        self.sky_spec.multiplyFluxNorm(sky_fn)
+
+        self.phot_params = PhotometricParameters()
+
+        self.sed_probs = np.array(sed_probs)/np.sum(sed_probs)
 
         self.snr = snr
 
@@ -45,17 +54,21 @@ class calcIG(object):
         sed_colors = []
         color_errors = []
 
-        mag_error = 1.0/self.snr
-        color_error = np.sqrt(2)*mag_error
-
         for sed_obj in self._sed_list:
 
             sed_mags = self._filter_dict.magListForSed(sed_obj)
+            mag_errors = [calcMagError_sed(sed_obj, filt,
+                                           self.sky_spec, filt,
+                                           self.phot_params, 1.0) for
+                          filt in self._filter_dict.values()]
+
             if np.isnan(sed_mags[0]):
                 print(sed_mags)
             sed_colors.append([sed_mags[i] - sed_mags[i+1]
                                for i in range(len(sed_mags) - 1)])
-            color_errors.append([color_error for i in range(len(sed_mags)-1)])
+            color_errors.append([np.sqrt(mag_errors[i]**2. +
+                                         mag_errors[i+1]**2.) for i
+                                 in range(len(mag_errors) - 1)])
 
         return np.array(sed_colors), np.array(color_errors)
 
@@ -101,7 +114,6 @@ class calcIG(object):
             y_dist = cdist(y_samples, [colors[idx]]).flatten()
             y_sort = np.argsort(y_dist)
             y_dist = y_dist[y_sort]
-            #y_dist[1:] = [y_dist[x+1] - y_dist[x] for x in range(num_points-1)]
             y_samples = y_samples[y_sort]
 
             x_total[idx*num_points:(idx+1)*num_points] = \
@@ -125,22 +137,17 @@ class calcIG(object):
             y_dens = sed_probs[idx]*rv.pdf(y_samp, mean=colors[idx],
                                            cov=np.diagflat(errors[idx])**2.)
 
-            # norm_factor = ((errors[0][0]*10)**num_colors)/num_points
-            # norm_factor = np.pi*[]
             norm_factor = (y_distances[idx][1:]**num_colors -
                            y_distances[idx][:-1]**num_colors)
-            norm_factor = np.append((y_distances[idx][0]**num_colors), norm_factor)
+            norm_factor = np.append((y_distances[idx][0]**num_colors), 
+                                    norm_factor)
             norm_factor *= ((np.pi**(num_colors/2.))/gamma((num_colors/2.)+1))
 
             hyx_i = np.nansum(norm_factor * (y_dens * np.log2(y_dens /
-                                                x_dens[idx*num_points:(idx+1) *
-                                                        num_points])))
-
-            # hyx_i = norm_factor * np.nansum((y_dens * np.log2(y_dens /
-            #                                 x_dens[idx*num_points:(idx+1) *
-            #                                        num_points])))
-
+                                             x_dens[idx*num_points:(idx+1) *
+                                                    num_points])))
             hyx_sum += hyx_i
+            print(hyx_i, hyx_sum)
 
         return -1.*hyx_sum
 

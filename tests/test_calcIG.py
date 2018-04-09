@@ -3,7 +3,8 @@ sys.path.append('..')
 import unittest
 import numpy as np
 from siggi import filters, spectra, calcIG
-from siggi import Sed
+from siggi import Sed, Bandpass
+from siggi.lsst_utils import PhotometricParameters, calcMagError_sed
 from copy import deepcopy
 
 
@@ -16,6 +17,12 @@ class testSiggi(unittest.TestCase):
         s = spectra()
         cls.red_spec = s.get_red_spectrum()
         cls.blue_spec = s.get_blue_spectrum()
+        cls.sky_spec = s.get_dark_sky_spectrum()
+
+        cls.imsimBand = Bandpass()
+        cls.imsimBand.imsimBandpass()
+
+        cls.phot_params = PhotometricParameters()
 
     def test_calc_colors(self):
 
@@ -28,8 +35,17 @@ class testSiggi(unittest.TestCase):
         colors, errors = test_c.calc_colors()
 
         np.testing.assert_equal(colors, np.zeros(np.shape(colors)))
-        np.testing.assert_equal(errors, 
-                                np.ones(np.shape(errors))*np.sqrt(2)*(1/snr))
+
+        sky_fn = self.sky_spec.calcFluxNorm(19.0, self.imsimBand)
+        self.sky_spec.multiplyFluxNorm(sky_fn)
+
+        test_error = calcMagError_sed(test_c._sed_list[0], 
+                                      trap_dict['filter_0'],
+                                      self.sky_spec, trap_dict['filter_0'],
+                                      self.phot_params, 1.0)
+
+        np.testing.assert_almost_equal(errors, [[test_error*np.sqrt(2)],
+                                                [test_error*np.sqrt(2)]])
 
         trap_dict_2 = self.f.trap_filters([[450., 60, 30], [800, 60, 30],
                                            [1000., 60, 30]])
@@ -76,9 +92,10 @@ class testSiggi(unittest.TestCase):
         trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60]])
         sed_probs = [0.5, 0.5]
         test_c = calcIG(trap_dict, [self.red_spec, self.blue_spec],
-                        sed_probs, snr=2.)   
+                        sed_probs, snr=2.)
         hy = test_c.calc_h()
         colors, errors = test_c.calc_colors()
+        print(colors, errors)
         hyx = test_c.calc_hyx(colors, errors)
 
         self.assertAlmostEqual(hy, hyx, delta=0.01)
