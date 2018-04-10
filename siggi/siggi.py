@@ -70,8 +70,6 @@ class siggi(object):
 
     def grid_results(self, filt_params):
 
-        print(filt_params)
-
         if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
             filt_centers = filt_params
         elif ((self.adjust_ratios is False) | (self.adjust_widths is False)):
@@ -86,8 +84,8 @@ class siggi(object):
         if np.min(filt_diffs) <= 0:
             return 0.
 
-        f = filters(self.filt_min - self.width_max,
-                    self.filt_max + self.width_max)
+        f = filters(self.filt_min - self.width_max/2.,
+                    self.filt_max + self.width_max/2.)
 
         if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
@@ -114,5 +112,6 @@ class siggi(object):
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
                    sky_mag=self.sky_mag, sed_mags=self.sed_mags)
         step_result = c.calc_IG()
+        print(filt_params, step_result)
 
         return -1.*step_result
