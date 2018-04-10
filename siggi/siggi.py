@@ -38,7 +38,7 @@ class siggi(object):
                          adjust_widths=False, width_min=30., width_max=120.,
                          adjust_width_ratio=False, 
                          ratio_min=0.5, ratio_max=0.9,
-                         procs=4, n_opt_points=100):
+                         procs=4, n_opt_points=100, skopt_kwargs_dict=None):
 
         self.adjust_widths = adjust_widths
         self.adjust_ratios = adjust_width_ratio
@@ -62,9 +62,14 @@ class siggi(object):
 
         print(dim_list)
 
-        res = gp_minimize(self.grid_results, dim_list, n_jobs=procs,
-                          x0=x0,
-                          n_calls=n_opt_points)
+        skopt_kwargs = {'n_jobs': procs,
+                        'x0': x0,
+                        'n_calls': n_opt_points}
+        if skopt_kwargs_dict is not None:
+            for key, val in skopt_kwargs_dict.items():
+                skopt_kwargs[key] = val
+        
+        res = gp_minimize(self.grid_results, dim_list, **skopt_kwargs)
 
         return res
 

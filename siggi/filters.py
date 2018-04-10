@@ -71,10 +71,10 @@ class filters(object):
                 climb_steps = 0
 
             min_idx = np.where(wavelen_arr >=
-                               (band[0]-(band[1]/2.)-offset))[0][0]
+                               (band[0]-(band[1]/2.)))[0][0]
             max_idx = np.where(wavelen_arr >=
-                               (band[0]+(band[1]/2.)+offset))[0][0]
-            
+                               (band[0]+(band[1]/2.)))[0][0]
+
             sb[min_idx:max_idx] = 1.0
 
             if climb_steps > 0:
