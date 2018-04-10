@@ -6,8 +6,8 @@ from scipy.spatial.distance import cdist
 from scipy import stats
 from scipy.special import gamma
 from . import Sed, Bandpass, spectra
-from lsst_utils import calcMagError_sed
-from lsst_utils import PhotometricParameters
+from .lsst_utils import calcMagError_sed
+from .lsst_utils import PhotometricParameters
 
 __all__ = ["calcIG"]
 

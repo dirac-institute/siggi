@@ -32,7 +32,8 @@ class siggi(object):
                 self.z_probs.append(z_prior(z_val)*weight)
 
     def optimize_filters(self, filt_min=300., filt_max=1200.,
-                         snr_level=5., num_filters=6, filter_type='trap',
+                         sky_mag=19.0, sed_mags=22.0, num_filters=6, 
+                         filter_type='trap',
                          default_width=120., default_ratio=0.5,
                          adjust_widths=False, width_min=30., width_max=120.,
                          adjust_width_ratio=False, 
@@ -44,7 +45,8 @@ class siggi(object):
         self.default_width = default_width
         self.default_ratio = default_ratio
         self.width_max = width_max
-        self.snr_level = snr_level
+        self.sky_mag = sky_mag
+        self.sed_mags = sed_mags
         self.filt_min = filt_min
         self.filt_max = filt_max
 
@@ -110,7 +112,7 @@ class siggi(object):
                                         for filt_loc in filt_centers])
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
-                   snr=self.snr_level)
+                   sky_mag=self.sky_mag, sed_mags=self.sed_mags)
         step_result = c.calc_IG()
 
         return -1.*step_result
