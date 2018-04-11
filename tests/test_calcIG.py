@@ -111,15 +111,18 @@ class testSiggi(unittest.TestCase):
                                          [800., 120, 60], [800., 120, 60],
                                          [800., 120, 60], [800., 120, 60]])
         sed_probs = [0.25, 0.25, 0.25, 0.25]
+
         test_c = calcIG(trap_dict, [self.red_spec, self.red_spec,
                                     self.red_spec, self.red_spec],
                         sed_probs, sed_mags=23.)
+
         ig = test_c.calc_IG()
         self.assertAlmostEqual(ig, 0., delta=0.01)
 
         # At very high signal to noise information gain should be perfect
         trap_dict_2 = self.f.trap_filters([[400., 120, 60], [600., 120, 60],
                                            [800., 120, 60]])
+
         sed_probs_2 = [0.25, 0.25, 0.25, 0.25]
         test_c_2 = calcIG(trap_dict_2, [self.red_spec, self.red_spec_z_1,
                                         self.blue_spec, self.blue_spec_z_1],
