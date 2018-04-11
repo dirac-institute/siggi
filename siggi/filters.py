@@ -11,7 +11,7 @@ class filters(object):
     a Bandpass dictionary.
     """
 
-    def __init__(self, wavelen_min=200., wavelen_max=1500., wavelen_step=0.1):
+    def __init__(self, wavelen_min=300., wavelen_max=1200., wavelen_step=0.1):
 
         self.wavelen_min = wavelen_min
         self.wavelen_max = wavelen_max
@@ -64,17 +64,17 @@ class filters(object):
                 slope = 1./climb_width
                 climb_values = np.array([slope*i for i in
                                         np.arange(0, climb_width+offset,
-                                                self.wavelen_step)])
+                                                  self.wavelen_step)])
 
                 climb_steps = len(climb_values)
             else:
                 climb_steps = 0
 
             min_idx = np.where(wavelen_arr >=
-                               (band[0]-(band[1]/2.)-offset))[0][0]
+                               (band[0]-(band[1]/2.)))[0][0]
             max_idx = np.where(wavelen_arr >=
-                               (band[0]+(band[1]/2.)+offset))[0][0]
-            
+                               (band[0]+(band[1]/2.)))[0][0]
+
             sb[min_idx:max_idx] = 1.0
 
             if climb_steps > 0:

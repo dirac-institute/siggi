@@ -3,7 +3,8 @@ sys.path.append('..')
 import unittest
 import numpy as np
 from siggi import filters, spectra, calcIG
-from siggi import Sed
+from siggi import Sed, Bandpass
+from siggi.lsst_utils import PhotometricParameters, calcMagError_sed
 from copy import deepcopy
 
 
@@ -16,24 +17,40 @@ class testSiggi(unittest.TestCase):
         s = spectra()
         cls.red_spec = s.get_red_spectrum()
         cls.blue_spec = s.get_blue_spectrum()
+        cls.sky_spec = s.get_dark_sky_spectrum()
+
         cls.red_spec_z_1 = deepcopy(cls.red_spec)
-        cls.red_spec_z_1.redshiftSED(1.)
+        cls.red_spec_z_1.redshiftSED(1.0)
         cls.blue_spec_z_1 = deepcopy(cls.blue_spec)
-        cls.blue_spec_z_1.redshiftSED(1.)
+        cls.blue_spec_z_1.redshiftSED(1.0)
+
+        cls.imsimBand = Bandpass()
+        cls.imsimBand.imsimBandpass()
+
+        cls.phot_params = PhotometricParameters()
 
     def test_calc_colors(self):
 
         trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60]])
         sed_list = [self.red_spec, self.red_spec]
         sed_probs = [0.5, 0.5]
-        snr = np.random.uniform(1., high=10.)
-        test_c = calcIG(trap_dict, sed_list, sed_probs, snr=snr)
+        test_c = calcIG(trap_dict, sed_list, sed_probs,
+                        sed_mags=np.random.uniform(21.0, 23.0))
 
         colors, errors = test_c.calc_colors()
 
         np.testing.assert_equal(colors, np.zeros(np.shape(colors)))
-        np.testing.assert_equal(errors, 
-                                np.ones(np.shape(errors))*np.sqrt(2)*(1/snr))
+
+        sky_fn = self.sky_spec.calcFluxNorm(19.0, self.imsimBand)
+        self.sky_spec.multiplyFluxNorm(sky_fn)
+
+        test_error = calcMagError_sed(test_c._sed_list[0], 
+                                      trap_dict['filter_0'],
+                                      self.sky_spec, trap_dict['filter_0'],
+                                      self.phot_params, 1.0)
+
+        np.testing.assert_almost_equal(errors, [[test_error*np.sqrt(2)],
+                                                [test_error*np.sqrt(2)]])
 
         trap_dict_2 = self.f.trap_filters([[450., 60, 30], [800, 60, 30],
                                            [1000., 60, 30]])
@@ -49,7 +66,7 @@ class testSiggi(unittest.TestCase):
         flambda_1[700:] *= f_norm_1_2
         sed_1.flambda = flambda_1
 
-        test_c2 = calcIG(trap_dict_2, [sed_1], [1.0], snr=snr)
+        test_c2 = calcIG(trap_dict_2, [sed_1], [1.0])
 
         colors2, errors2 = test_c2.calc_colors()
 
@@ -79,8 +96,8 @@ class testSiggi(unittest.TestCase):
 
         trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60]])
         sed_probs = [0.5, 0.5]
-        test_c = calcIG(trap_dict, [self.red_spec, self.blue_spec],
-                        sed_probs, snr=2.)   
+        test_c = calcIG(trap_dict, [self.red_spec, self.red_spec],
+                        sed_probs)
         hy = test_c.calc_h()
         colors, errors = test_c.calc_colors()
         hyx = test_c.calc_hyx(colors, errors)
@@ -94,20 +111,24 @@ class testSiggi(unittest.TestCase):
                                          [800., 120, 60], [800., 120, 60],
                                          [800., 120, 60], [800., 120, 60]])
         sed_probs = [0.25, 0.25, 0.25, 0.25]
-        test_c = calcIG(trap_dict, [self.red_spec, self.blue_spec,
-                                    self.red_spec_z_1, self.blue_spec_z_1],
-                        sed_probs, snr=2.)
+
+        test_c = calcIG(trap_dict, [self.red_spec, self.red_spec,
+                                    self.red_spec, self.red_spec],
+                        sed_probs, sed_mags=23.)
+
         ig = test_c.calc_IG()
         self.assertAlmostEqual(ig, 0., delta=0.01)
 
         # At very high signal to noise information gain should be perfect
         trap_dict_2 = self.f.trap_filters([[400., 120, 60], [600., 120, 60],
                                            [800., 120, 60]])
-        sed_probs_2 = [0.5, 0.5]
-        test_c_2 = calcIG(trap_dict_2, [self.red_spec, self.blue_spec],
-                          sed_probs_2, snr=100.)
+
+        sed_probs_2 = [0.25, 0.25, 0.25, 0.25]
+        test_c_2 = calcIG(trap_dict_2, [self.red_spec, self.red_spec_z_1,
+                                        self.blue_spec, self.blue_spec_z_1],
+                          sed_probs_2, sed_mags=10.0, sky_mag=20.0)
         ig_2 = test_c_2.calc_IG()
-        self.assertAlmostEqual(ig_2, 1.0, delta=0.01)
+        self.assertAlmostEqual(ig_2, 2.0, delta=0.01)
 
     @classmethod
     def tearDownClass(cls):

@@ -1,8 +1,10 @@
 import numpy as np
 import multiprocessing as mp
+from skopt import gp_minimize
 from copy import deepcopy
 from functools import reduce
 from . import filters, spectra, calcIG
+from .lsst_utils import BandpassDict
 
 __all__ = ["siggi"]
 
@@ -30,67 +32,62 @@ class siggi(object):
                 self.shift_seds.append(spec_copy)
                 self.z_probs.append(z_prior(z_val)*weight)
 
-    def optimize_filters(self, filt_min=300., filt_max=1200., filt_steps=10,
-                         snr_level=5., num_filters=6, filter_type='trap',
+        bp_dict_folder = '../data/lsst_baseline_throughputs'
+        bp_dict = BandpassDict.loadTotalBandpassesFromFiles(bandpassDir=
+                                                            bp_dict_folder)
+
+        self.calib_filter = bp_dict['r']
+
+    def optimize_filters(self, filt_min=300., filt_max=1200.,
+                         sky_mag=19.0, sed_mags=22.0, num_filters=6, 
+                         filter_type='trap',
                          default_width=120., default_ratio=0.5,
                          adjust_widths=False, width_min=30., width_max=120.,
-                         width_steps=10, adjust_width_ratio=False, 
-                         ratio_min=0.5, ratio_max=0.9, ratio_steps=10,
-                         procs=4):
+                         adjust_width_ratio=False, 
+                         ratio_min=0.5, ratio_max=0.9,
+                         procs=4, n_opt_points=100, skopt_kwargs_dict=None):
 
-        self.filt_wave_range = np.linspace(filt_min, filt_max, filt_steps)
-
-        dim_list = [len(self.filt_wave_range) for i in range(num_filters)]
-
-        self.width_list = None
-        self.ratio_list = None
+        self.adjust_widths = adjust_widths
+        self.adjust_ratios = adjust_width_ratio
         self.default_width = default_width
         self.default_ratio = default_ratio
+        self.width_max = width_max
+        self.sky_mag = sky_mag
+        self.sed_mags = sed_mags
+        self.filt_min = filt_min
+        self.filt_max = filt_max
+
+        dim_list = [(filt_min, filt_max) for n in range(num_filters)]
+        x0 = list(np.linspace(filt_min, filt_max, num_filters))
 
         if adjust_widths is True:
-            dim_list.insert(0, width_steps)
-            self.width_list = np.linspace(width_min, width_max, width_steps)
-
+            dim_list.insert(0, (width_min, width_max))
+            x0.insert(0, self.default_width)
         if adjust_width_ratio is True:
-            dim_list.insert(0, ratio_steps)
-            self.ratio_list = np.linspace(ratio_min, ratio_max, ratio_steps)
+            dim_list.insert(0, (ratio_min, ratio_max))
+            x0.insert(0, self.default_ratio)
 
-        num_points = reduce((lambda x, y: x*y), dim_list)
+        print(dim_list)
 
-        step_on = 0
+        skopt_kwargs = {'n_jobs': procs,
+                        'x0': x0,
+                        'n_calls': n_opt_points}
+        if skopt_kwargs_dict is not None:
+            for key, val in skopt_kwargs_dict.items():
+                skopt_kwargs[key] = val
+        
+        res = gp_minimize(self.grid_results, dim_list, **skopt_kwargs)
 
-        pool = mp.Pool(processes=procs)
+        return res
 
-        pool_res = pool.map(unwrap_self_f, zip([self]*num_points, 
-                                               [[idx, dim_list, width_max,
-                                                 snr_level]
-                                                for idx in range(num_points)]))
+    def grid_results(self, filt_params):
 
-        result_grid = np.reshape(pool_res, dim_list)
-
-        return result_grid
-
-    def grid_results(self, arg_list):
-
-        idx = arg_list[0]
-        dim_list = arg_list[1]
-        width_max = arg_list[2]
-        snr_level = arg_list[3]
-
-        step_indices = np.unravel_index(idx, dim_list)
-
-        if idx % reduce((lambda x, y: x*y), dim_list[-2:]) == 0:
-            print(step_indices)
-
-        if ((self.width_list is None) and (self.ratio_list is None)):
-            filt_centers = [self.filt_wave_range[filt_idx] 
-                            for filt_idx in step_indices]
-        elif ((self.ratio_list is None) | (self.width_list is None)):
-            filt_centers = [self.filt_wave_range[filt_idx] 
-                            for filt_idx in step_indices[1:]]
+        if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
+            filt_centers = filt_params
+        elif ((self.adjust_ratios is False) | (self.adjust_widths is False)):
+            filt_centers = filt_params[1:]
         else:
-            filt_centers = [self.filt_wave_range[filt_idx]
-                            for filt_idx in step_indices[2:]]
+            filt_centers = filt_params[2:]
 
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1] 
                       for idx in range(1, len(filt_centers))]
@@ -99,32 +96,35 @@ class siggi(object):
         if np.min(filt_diffs) <= 0:
             return 0.
 
-        f = filters(self.filt_wave_range[0] - width_max,
-                    self.filt_wave_range[-1] + width_max)
+        f = filters(self.filt_min - self.width_max/2.,
+                    self.filt_max + self.width_max/2.)
 
-        if ((self.width_list is None) and (self.ratio_list is None)):
+        if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
                                          self.default_ratio*self.default_width]
                                         for filt_loc in filt_centers])
-        elif self.ratio_list is None:
+        elif self.adjust_ratios is False:
             filt_dict = f.trap_filters([[filt_loc, 
-                                         self.width_list[step_indices[0]],
+                                         filt_params[0],
                                          self.default_ratio *
-                                         self.width_list[step_indices[0]]]
+                                         filt_params[0]]
                                         for filt_loc in filt_centers])
-        elif self.width_list is None:
+        elif self.adjust_widths is False:
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
-                                         self.ratio_list[step_indices[0]] *
+                                         filt_params[0] *
                                          self.default_width]
                                         for filt_loc in filt_centers])
         else:
             filt_dict = f.trap_filters([[filt_loc, 
-                                         self.width_list[step_indices[1]],
-                                        self.ratio_list[step_indices[0]] *
-                                        self.width_list[step_indices[1]]]
+                                         filt_params[1],
+                                        filt_params[0] *
+                                        filt_params[1]]
                                         for filt_loc in filt_centers])
 
-        c = calcIG(filt_dict, self.shift_seds, self.z_probs, snr=snr_level)
+        c = calcIG(filt_dict, self.shift_seds, self.z_probs,
+                   sky_mag=self.sky_mag, sed_mags=self.sed_mags,
+                   ref_filter=self.calib_filter)
         step_result = c.calc_IG()
+        print(filt_params, step_result)
 
-        return step_result
+        return -1.*step_result

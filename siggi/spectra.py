@@ -28,6 +28,14 @@ class spectra(object):
 
         return sed_obj
 
+    def get_dark_sky_spectrum(self):
+
+        sed_obj = Sed()
+        sky_sed = '../data/lsst_baseline_throughputs/darksky.dat'
+        sed_obj.readSED_flambda(sky_sed)
+
+        return sed_obj
+
     def get_sigmoid_spectrum(self, lam_0=364.6):
 
         wavelen = np.arange(9., 2400.05, 0.1)
