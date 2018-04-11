@@ -64,7 +64,7 @@ class filters(object):
                 slope = 1./climb_width
                 climb_values = np.array([slope*i for i in
                                         np.arange(0, climb_width+offset,
-                                                self.wavelen_step)])
+                                                  self.wavelen_step)])
 
                 climb_steps = len(climb_values)
             else:
