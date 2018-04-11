@@ -4,6 +4,7 @@ from skopt import gp_minimize
 from copy import deepcopy
 from functools import reduce
 from . import filters, spectra, calcIG
+from .lsst_utils import BandpassDict
 
 __all__ = ["siggi"]
 
@@ -30,6 +31,12 @@ class siggi(object):
                 spec_copy.redshiftSED(z_val)
                 self.shift_seds.append(spec_copy)
                 self.z_probs.append(z_prior(z_val)*weight)
+
+        bp_dict_folder = '../data/lsst_baseline_throughputs'
+        bp_dict = BandpassDict.loadTotalBandpassesFromFiles(bandpassDir=
+                                                            bp_dict_folder)
+
+        self.calib_filter = bp_dict['r']
 
     def optimize_filters(self, filt_min=300., filt_max=1200.,
                          sky_mag=19.0, sed_mags=22.0, num_filters=6, 
@@ -115,7 +122,8 @@ class siggi(object):
                                         for filt_loc in filt_centers])
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
-                   sky_mag=self.sky_mag, sed_mags=self.sed_mags)
+                   sky_mag=self.sky_mag, sed_mags=self.sed_mags,
+                   ref_filter=self.calib_filter)
         step_result = c.calc_IG()
         print(filt_params, step_result)
 
