@@ -3,7 +3,7 @@ sys.path.append('..')
 import unittest
 import numpy as np
 from siggi import filters, spectra, calcIG
-from siggi import Sed, Bandpass
+from siggi import Sed, Bandpass, BandpassDict
 from siggi.lsst_utils import PhotometricParameters, calcMagError_sed
 from copy import deepcopy
 
@@ -32,6 +32,9 @@ class testSiggi(unittest.TestCase):
     def test_calc_colors(self):
 
         trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60]])
+        filt_dict, atmos_filt_dict = \
+            BandpassDict.addSystemBandpass(trap_dict)
+
         sed_list = [self.red_spec, self.red_spec]
         sed_probs = [0.5, 0.5]
         test_c = calcIG(trap_dict, sed_list, sed_probs,
@@ -45,8 +48,8 @@ class testSiggi(unittest.TestCase):
         self.sky_spec.multiplyFluxNorm(sky_fn)
 
         test_error = calcMagError_sed(test_c._sed_list[0], 
-                                      trap_dict['filter_0'],
-                                      self.sky_spec, trap_dict['filter_0'],
+                                      atmos_filt_dict['filter_0'],
+                                      self.sky_spec, filt_dict['filter_0'],
                                       self.phot_params, 1.0)
 
         np.testing.assert_almost_equal(errors, [[test_error*np.sqrt(2)],
@@ -54,12 +57,14 @@ class testSiggi(unittest.TestCase):
 
         trap_dict_2 = self.f.trap_filters([[450., 60, 30], [800, 60, 30],
                                            [1000., 60, 30]])
+        filt_dict_2, atmos_filt_dict_2 = \
+            BandpassDict.addSystemBandpass(trap_dict_2)
         sed_1 = Sed()
         sed_1.setSED(wavelen=np.linspace(200., 1500., 1301),
                      flambda=np.ones(1301))
-        f_norm_1_0 = sed_1.calcFluxNorm(15.0, trap_dict_2['filter_0'])
-        f_norm_1_1 = sed_1.calcFluxNorm(14.0, trap_dict_2['filter_1'])
-        f_norm_1_2 = sed_1.calcFluxNorm(13.0, trap_dict_2['filter_2'])
+        f_norm_1_0 = sed_1.calcFluxNorm(15.0, filt_dict_2['filter_0'])
+        f_norm_1_1 = sed_1.calcFluxNorm(14.0, filt_dict_2['filter_1'])
+        f_norm_1_2 = sed_1.calcFluxNorm(13.0, filt_dict_2['filter_2'])
         flambda_1 = np.ones(1301)
         flambda_1[:500] *= f_norm_1_0
         flambda_1[500:700] *= f_norm_1_1

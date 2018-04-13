@@ -1,11 +1,12 @@
 from __future__ import division
 
+import os
 import numpy as np
 from sklearn.neighbors.kde import KernelDensity
 from scipy.spatial.distance import cdist
 from scipy import stats
 from scipy.special import gamma
-from . import Sed, Bandpass, spectra
+from . import Sed, Bandpass, BandpassDict, spectra
 from .lsst_utils import calcMagError_sed
 from .lsst_utils import PhotometricParameters
 
@@ -20,28 +21,38 @@ class calcIG(object):
     """
 
     def __init__(self, filter_dict, sed_list, sed_probs, sed_mags=22.0,
-                 sky_mag=19.0, ref_filter=None):
+                 sky_mag=19.0, ref_filter=None, phot_params=None):
 
-        self._filter_dict = filter_dict
         self._sed_list = []
+
+        if ref_filter is None:
+            ref_filter = Bandpass()
+            ref_filter.imsimBandpass()
+
         for sed_obj in sed_list:
+
             sed_copy = Sed()
             sed_copy.setSED(wavelen=sed_obj.wavelen,
                             flambda=sed_obj.flambda)
             sed_copy.resampleSED(wavelen_match=filter_dict.values()[0].wavelen)
             sed_copy.flambda[np.where(np.isnan(sed_copy.flambda))] = 0.
-            if ref_filter is None:
-                ref_filter = Bandpass()
-                ref_filter.imsimBandpass()
+
             f_norm = sed_copy.calcFluxNorm(sed_mags, ref_filter)
             sed_copy.multiplyFluxNorm(f_norm)
             self._sed_list.append(sed_copy)
+
+        self._filter_dict, self._atmos_filt_dict = \
+            BandpassDict.addSystemBandpass(filter_dict)
 
         self.sky_spec = spectra().get_dark_sky_spectrum()
         sky_fn = self.sky_spec.calcFluxNorm(sky_mag, ref_filter)
         self.sky_spec.multiplyFluxNorm(sky_fn)
 
-        self.phot_params = PhotometricParameters()
+        if phot_params is None:
+            # Use Default LSST parameters
+            self.phot_params = PhotometricParameters()
+        else:
+            self.phot_params = phot_params
 
         self.sed_probs = np.array(sed_probs)/np.sum(sed_probs)
 
@@ -55,10 +66,11 @@ class calcIG(object):
         for sed_obj in self._sed_list:
 
             sed_mags = self._filter_dict.magListForSed(sed_obj)
-            mag_errors = [calcMagError_sed(sed_obj, filt,
+            mag_errors = [calcMagError_sed(sed_obj, filt_a,
                                            self.sky_spec, filt,
                                            self.phot_params, 1.0) for
-                          filt in self._filter_dict.values()]
+                          filt, filt_a in zip(self._filter_dict.values(),
+                                              self._atmos_filt_dict.values())]
 
             if np.isnan(sed_mags[0]):
                 print(sed_mags)
