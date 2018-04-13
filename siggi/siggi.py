@@ -96,8 +96,8 @@ class siggi(object):
         if np.min(filt_diffs) <= 0:
             return 0
 
-        f = filters(self.filt_min - self.width_max/2.,
-                    self.filt_max + self.width_max/2.)
+        f = filters(self.filt_min,
+                    self.filt_max)
 
         if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
 
