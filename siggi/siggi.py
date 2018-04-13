@@ -94,7 +94,7 @@ class siggi(object):
         filt_diffs = np.array(filt_diffs, dtype=np.int)
 
         if np.min(filt_diffs) <= 0:
-            return 0.
+            return 0
 
         f = filters(self.filt_min - self.width_max/2.,
                     self.filt_max + self.width_max/2.)
@@ -103,23 +103,45 @@ class siggi(object):
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
                                          self.default_ratio*self.default_width]
                                         for filt_loc in filt_centers])
+            if filt_centers[0] - self.default_width/2. < self.filt_min:
+                return 0
+            elif filt_centers[-1] + self.default_width/2. > self.filt_max:
+                return 0
+            
         elif self.adjust_ratios is False:
             filt_dict = f.trap_filters([[filt_loc, 
                                          filt_params[0],
                                          self.default_ratio *
                                          filt_params[0]]
                                         for filt_loc in filt_centers])
+
+            if filt_centers[0] - filt_params[0]/2. < self.filt_min:
+                return 0
+            elif filt_centers[-1] + filt_params[0]/2. > self.filt_max:
+                return 0
+
         elif self.adjust_widths is False:
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
                                          filt_params[0] *
                                          self.default_width]
                                         for filt_loc in filt_centers])
+
+            if filt_centers[0] - self.default_width/2. < self.filt_min:
+                return 0
+            elif filt_centers[-1] + self.default_width/2. > self.filt_max:
+                return 0
+
         else:
             filt_dict = f.trap_filters([[filt_loc, 
                                          filt_params[1],
                                         filt_params[0] *
                                         filt_params[1]]
                                         for filt_loc in filt_centers])
+
+            if filt_centers[0] - filt_params[1]/2. < self.filt_min:
+                return 0
+            elif filt_centers[-1] + filt_params[1]/2. > self.filt_max:
+                return 0
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
                    sky_mag=self.sky_mag, sed_mags=self.sed_mags,
