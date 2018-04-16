@@ -21,7 +21,8 @@ class calcIG(object):
     """
 
     def __init__(self, filter_dict, sed_list, sed_probs, sed_mags=22.0,
-                 sky_mag=19.0, ref_filter=None, phot_params=None):
+                 sky_mag=19.0, ref_filter=None, phot_params=None,
+                 fwhm_eff=1.0):
 
         self._sed_list = []
 
@@ -55,6 +56,7 @@ class calcIG(object):
             self.phot_params = phot_params
 
         self.sed_probs = np.array(sed_probs)/np.sum(sed_probs)
+        self.fwhm_eff = fwhm_eff
 
         return
 
@@ -68,7 +70,7 @@ class calcIG(object):
             sed_mags = self._filter_dict.magListForSed(sed_obj)
             mag_errors = [calcMagError_sed(sed_obj, filt_a,
                                            self.sky_spec, filt,
-                                           self.phot_params, 1.0) for
+                                           self.phot_params, self.fwhm_eff) for
                           filt, filt_a in zip(self._filter_dict.values(),
                                               self._atmos_filt_dict.values())]
 

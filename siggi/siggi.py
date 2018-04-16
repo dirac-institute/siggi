@@ -38,13 +38,14 @@ class siggi(object):
 
         self.calib_filter = bp_dict['r']
 
-    def optimize_filters(self, filt_min=300., filt_max=1200.,
+    def optimize_filters(self, filt_min=300., filt_max=1100.,
                          sky_mag=19.0, sed_mags=22.0, num_filters=6, 
                          filter_type='trap',
                          default_width=120., default_ratio=0.5,
                          adjust_widths=False, width_min=30., width_max=120.,
                          adjust_width_ratio=False, 
                          ratio_min=0.5, ratio_max=0.9,
+                         system_wavelen_min=300., system_wavelen_max=1150.,
                          procs=4, n_opt_points=100, skopt_kwargs_dict=None):
 
         self.adjust_widths = adjust_widths
@@ -56,6 +57,8 @@ class siggi(object):
         self.sed_mags = sed_mags
         self.filt_min = filt_min
         self.filt_max = filt_max
+        self.system_wavelen_min = system_wavelen_min
+        self.system_wavelen_max = system_wavelen_max
 
         dim_list = [(filt_min, filt_max) for n in range(num_filters)]
         x0 = list(np.linspace(filt_min, filt_max, num_filters))
@@ -96,8 +99,8 @@ class siggi(object):
         if np.min(filt_diffs) <= 0:
             return 0
 
-        f = filters(self.filt_min,
-                    self.filt_max)
+        f = filters(self.system_wavelen_min,
+                    self.system_wavelen_max)
 
         if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
 
