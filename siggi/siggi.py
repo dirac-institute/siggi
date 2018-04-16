@@ -33,17 +33,17 @@ class siggi(object):
                 self.z_probs.append(z_prior(z_val)*weight)
 
         bp_dict_folder = '../data/lsst_baseline_throughputs'
-        bp_dict = BandpassDict.loadTotalBandpassesFromFiles(bandpassDir=
-                                                            bp_dict_folder)
+        bp_dict = BandpassDict.loadTotalBandpassesFromFiles(
+            bandpassDir=bp_dict_folder)
 
         self.calib_filter = bp_dict['r']
 
     def optimize_filters(self, filt_min=300., filt_max=1100.,
-                         sky_mag=19.0, sed_mags=22.0, num_filters=6, 
+                         sky_mag=19.0, sed_mags=22.0, num_filters=6,
                          filter_type='trap',
                          default_width=120., default_ratio=0.5,
                          adjust_widths=False, width_min=30., width_max=120.,
-                         adjust_width_ratio=False, 
+                         adjust_width_ratio=False,
                          ratio_min=0.5, ratio_max=0.9,
                          system_wavelen_min=300., system_wavelen_max=1150.,
                          procs=4, n_opt_points=100, skopt_kwargs_dict=None):
@@ -78,7 +78,7 @@ class siggi(object):
         if skopt_kwargs_dict is not None:
             for key, val in skopt_kwargs_dict.items():
                 skopt_kwargs[key] = val
-        
+
         res = gp_minimize(self.grid_results, dim_list, **skopt_kwargs)
 
         return res
@@ -92,7 +92,7 @@ class siggi(object):
         else:
             filt_centers = filt_params[2:]
 
-        filt_diffs = [filt_centers[idx] - filt_centers[idx-1] 
+        filt_diffs = [filt_centers[idx] - filt_centers[idx-1]
                       for idx in range(1, len(filt_centers))]
         filt_diffs = np.array(filt_diffs, dtype=np.int)
 
@@ -112,7 +112,7 @@ class siggi(object):
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
                                          self.default_ratio*self.default_width]
                                         for filt_loc in filt_centers])
-            
+
         elif self.adjust_ratios is False:
 
             if filt_centers[0] - filt_params[0]/2. < self.filt_min:
@@ -120,7 +120,7 @@ class siggi(object):
             elif filt_centers[-1] + filt_params[0]/2. > self.filt_max:
                 return 0
 
-            filt_dict = f.trap_filters([[filt_loc, 
+            filt_dict = f.trap_filters([[filt_loc,
                                          filt_params[0],
                                          self.default_ratio *
                                          filt_params[0]]
@@ -145,7 +145,7 @@ class siggi(object):
             elif filt_centers[-1] + filt_params[1]/2. > self.filt_max:
                 return 0
 
-            filt_dict = f.trap_filters([[filt_loc, 
+            filt_dict = f.trap_filters([[filt_loc,
                                          filt_params[1],
                                         filt_params[0] *
                                         filt_params[1]]

@@ -151,10 +151,11 @@ class calcIG(object):
 
             norm_factor = (y_distances[idx][1:]**num_colors -
                            y_distances[idx][:-1]**num_colors)
-            norm_factor = np.append((y_distances[idx][0]**num_colors), 
+            norm_factor = np.append((y_distances[idx][0]**num_colors),
                                     norm_factor)
             norm_factor *= ((np.pi**(num_colors/2.))/gamma((num_colors/2.)+1))
-            norm_factor *= np.linalg.det(np.diag(errors[idx])/np.max(errors[idx]))
+            norm_factor *= np.linalg.det(np.diag(errors[idx]) /
+                                         np.max(errors[idx]))
 
             hyx_i = np.nansum(norm_factor * (y_dens * np.log2(y_dens /
                                              x_dens[idx*num_points:(idx+1) *

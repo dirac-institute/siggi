@@ -47,7 +47,7 @@ class testSiggi(unittest.TestCase):
         sky_fn = self.sky_spec.calcFluxNorm(19.0, self.imsimBand)
         self.sky_spec.multiplyFluxNorm(sky_fn)
 
-        test_error = calcMagError_sed(test_c._sed_list[0], 
+        test_error = calcMagError_sed(test_c._sed_list[0],
                                       atmos_filt_dict['filter_0'],
                                       self.sky_spec, filt_dict['filter_0'],
                                       self.phot_params, 1.0)
