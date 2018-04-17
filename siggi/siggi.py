@@ -150,7 +150,7 @@ class siggi(object):
             filt_dict = f.trap_filters([[filt_loc,
                                          filt_width,
                                          self.default_ratio *
-                                         filt_widths]
+                                         filt_width]
                                         for filt_loc, filt_width in
                                         zip(filt_centers, filt_widths)])
 
