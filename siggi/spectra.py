@@ -17,21 +17,25 @@ class spectra(object):
     def get_red_spectrum(self):
 
         sed_obj = Sed()
-        sed_obj.readSED_flambda('../data/Inst.10E10.1Z.spec.gz')
+        sed_obj.readSED_flambda(os.path.join(os.path.dirname(__file__),
+                                             '../data/Inst.10E10.1Z.spec.gz'))
 
         return sed_obj
 
     def get_blue_spectrum(self):
 
         sed_obj = Sed()
-        sed_obj.readSED_flambda('../data/Inst.64E08.1Z.spec.gz')
+        sed_obj.readSED_flambda(os.path.join(os.path.dirname(__file__),
+                                             '../data/Inst.64E08.1Z.spec.gz'))
 
         return sed_obj
 
     def get_dark_sky_spectrum(self):
 
         sed_obj = Sed()
-        sky_sed = '../data/lsst_baseline_throughputs/darksky.dat'
+        sky_sed = os.path.join(os.path.dirname(__file__),
+                                '../../data/lsst_baseline_throughputs',
+                                'darksky.dat')
         sed_obj.readSED_flambda(sky_sed)
 
         return sed_obj
