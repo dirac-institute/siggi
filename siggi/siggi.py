@@ -74,8 +74,13 @@ class siggi(object):
                 dim_list.insert(0, (width_min, width_max))
                 x0.insert(0, self.default_width)
         if adjust_width_ratio is True:
-            dim_list.insert(0, (ratio_min, ratio_max))
-            x0.insert(0, self.default_ratio)
+            if adjust_independently is True:
+                for i in range(num_filters):
+                    dim_list.insert(0, (ratio_min, ratio_max))
+                    x0.insert(0, self.default_ratio)
+            else:
+                dim_list.insert(0, (ratio_min, ratio_max))
+                x0.insert(0, self.default_ratio)
 
         print(dim_list)
 
@@ -130,10 +135,12 @@ class siggi(object):
 
         elif self.adjust_ratios is False:
 
+            filt_widths = np.array(filt_params[:self.num_filters])
+
             left_edge = np.array(filt_centers) - \
-                np.array(filt_params[:self.num_filters])/2.
+                filt_widths/2.
             right_edge = np.array(filt_centers) + \
-                np.array(filt_params[:self.num_filters])/2.
+                filt_widths/2.
 
             if np.min(left_edge) < self.filt_min:
                 return 0
@@ -141,10 +148,11 @@ class siggi(object):
                 return 0
 
             filt_dict = f.trap_filters([[filt_loc,
-                                         filt_params[0],
+                                         filt_width,
                                          self.default_ratio *
-                                         filt_params[0]]
-                                        for filt_loc in filt_centers])
+                                         filt_widths]
+                                        for filt_loc, filt_width in
+                                        zip(filt_centers, filt_widths)])
 
         elif self.adjust_widths is False:
 
@@ -153,28 +161,35 @@ class siggi(object):
             elif filt_centers[-1] + self.default_width/2. > self.filt_max:
                 return 0
 
+            filt_ratios = np.array(filt_params[:self.num_filters])
+
             filt_dict = f.trap_filters([[filt_loc, self.default_width,
-                                         filt_params[0] *
-                                         self.default_width]
-                                        for filt_loc in filt_centers])
+                                         filt_ratio * self.default_width]
+                                        for filt_loc, filt_ratio in
+                                        zip(filt_centers, filt_ratios)])
 
         else:
 
+            filt_widths = np.array(filt_params[self.num_filters:
+                                               self.num_filters*2])
+            filt_ratios = np.array(filt_params[:self.num_filters])
+
             left_edge = np.array(filt_centers) - \
-                np.array(filt_params[self.num_filters:self.num_filters*2])/2.
+                np.array(filt_widths)/2.
             right_edge = np.array(filt_centers) + \
-                np.array(filt_params[self.num_filters:self.num_filters*2])/2.
+                np.array(filt_widths)/2.
 
             if np.min(left_edge) < self.filt_min:
                 return 0
             elif np.max(right_edge) > self.filt_max:
                 return 0
 
-            filt_dict = f.trap_filters([[filt_loc,
-                                         filt_params[1],
-                                        filt_params[0] *
-                                        filt_params[1]]
-                                        for filt_loc in filt_centers])
+            filt_dict = f.trap_filters([[f_loc,
+                                         f_width,
+                                         f_width * f_ratio]
+                                        for f_loc, f_width, f_ratio in
+                                        zip(filt_centers, filt_widths,
+                                            filt_ratios)])
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
                    sky_mag=self.sky_mag, sed_mags=self.sed_mags,
