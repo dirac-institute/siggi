@@ -23,12 +23,12 @@ install:
   - conda info -a
 
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
-  - conda install -c conda-forge numpy scipy pybind11 matplotlib nose future scikit-learn
+  - conda install -c conda-forge numpy scipy matplotlib nose future scikit-learn
   - conda install -c conda-forge codecov
   - conda install -c conda-forge scikit-optimize 
   - source activate test-environment
   - conda install coverage
 
 script:
-  - nosetests -v -s --with-coverage --cover-package=esp
+  - nosetests -v -s --with-coverage --cover-package=siggi
   - codecov
