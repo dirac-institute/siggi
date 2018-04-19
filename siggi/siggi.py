@@ -46,10 +46,11 @@ class siggi(object):
                          default_width=120., default_ratio=0.5,
                          adjust_widths=False, width_min=30., width_max=120.,
                          adjust_width_ratio=False, adjust_independently=False,
-                         ratio_min=0.5, ratio_max=0.9,
+                         ratio_min=0.5, ratio_max=0.9, starting_points=None,
                          system_wavelen_min=300., system_wavelen_max=1150.,
-                         procs=4, n_opt_points=100, skopt_kwargs_dict=None,
-                         optimize_parallel=False):
+                         procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
+                         acq_opt_kwargs_dict=None, checkpointing=True,
+                         optimizer_verbosity=100):
 
         self.num_filters = num_filters
         self.adjust_widths = adjust_widths
@@ -68,35 +69,38 @@ class siggi(object):
         dim_list, x0 = self.set_dimensions(width_min, width_max,
                                            ratio_min, ratio_max)
 
-        skopt_kwargs = {'x0': x0,
-                        'n_calls': n_opt_points}
-        if skopt_kwargs_dict is not None:
-            for key, val in skopt_kwargs_dict.items():
-                skopt_kwargs[key] = val
+        if starting_points is not None:
+            x0 = starting_points
 
-        if optimize_parallel is False:
-            opt = gp_minimize(self.calc_results, dim_list, **skopt_kwargs)
-        else:
-            i = 0
-            opt = Optimizer(dimensions=[Real(x1, x2) for x1, x2 in dim_list],
-                            random_state=1)
-            with Parallel(n_jobs=procs, backend="threading",
-                          batch_size=1, verbose=100) as parallel:
-                while i < 10:
-                    if i == 0:
-                        x = skopt_kwargs['x0']
-                    else:
-                        x = opt.ask(n_points=procs*2)
+        i = 0
 
-                    y = parallel(delayed(unwrap_self_f)(arg1, val) for
-                                 arg1, val in zip([self]*len(x), x))
+        opt = Optimizer(dimensions=[Real(x1, x2) for x1, x2 in dim_list],
+                        random_state=1,
+                        acq_func_kwargs=acq_func_kwargs_dict,
+                        acq_optimizer_kwargs=acq_opt_kwargs_dict)
 
-                    opt.tell(x, y)
+        with Parallel(n_jobs=procs, backend="threading",
+                      batch_size=1, verbose=optimizer_verbosity) as parallel:
+            while i < n_opt_points:
+                if i == 0:
+                    x = x0
+                else:
+                    x = opt.ask(n_points=procs*2)
 
-                    non_zero = np.where(np.array(y) != 0)[0]
-                    i += len(non_zero)
+                y = parallel(delayed(unwrap_self_f)(arg1, val) for
+                             arg1, val in zip([self]*len(x), x))
 
-                    print(min(opt.yi), i)
+                opt.tell(x, y)
+
+                non_zero = np.where(np.array(y) != 0)[0]
+                i += len(non_zero)
+
+                if checkpointing is True:
+                    keep_rows = np.where(np.array(opt.yi) != 0)
+                    np.savetxt('yi.out', np.array(opt.yi)[keep_rows])
+                    np.savetxt('Xi.out', np.array(opt.Xi)[keep_rows])
+
+                print(min(opt.yi), i)
 
         return opt
 
