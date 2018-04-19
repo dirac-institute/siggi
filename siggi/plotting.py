@@ -8,25 +8,26 @@ __all__ = ["plotting"]
 
 class plotting(object):
 
-    def __init__(self, sed_list, best_point, width, ratio):
+    def __init__(self, sed_list, best_point, width, ratio,
+                 frozen_filt_dict=None, frozen_filt_eff_wavelen=None):
 
         f = filters()
 
         if type(width) == list:
             if type(ratio) == list:
-                filter_info = [[filt_cent, filt_width, filt_width*filt_ratio] 
+                filter_info = [[filt_cent, filt_width, filt_width*filt_ratio]
                                for filt_cent, filt_width, filt_ratio in
                                zip(best_point, width, ratio)]
             else:
-                filter_info = [[filt_cent, filt_width, filt_width*ratio] 
+                filter_info = [[filt_cent, filt_width, filt_width*ratio]
                                for filt_cent, filt_width in
                                zip(best_point, width)]
         elif type(ratio) == list:
-            filter_info = [[filt_cent, width, width*filt_ratio] 
+            filter_info = [[filt_cent, width, width*filt_ratio]
                            for filt_cent, filt_ratio in
                            zip(best_point, ratio)]
         else:
-            filter_info = [[filt_cent, width, width*ratio] 
+            filter_info = [[filt_cent, width, width*ratio]
                            for filt_cent in best_point]
 
         trap_dict = f.trap_filters(filter_info)
@@ -34,7 +35,23 @@ class plotting(object):
         filter_dict, atmos_filt_dict = \
             BandpassDict.addSystemBandpass(trap_dict)
 
-        self.filter_dict = filter_dict
+        if frozen_filt_dict is None:
+            self.filter_dict = filter_dict
+        else:
+            if (type(frozen_filt_eff_wavelen) != list):
+                raise ValueError("If including frozen filters, " +
+                                 "need list of eff. wavelengths.")
+            filter_wavelengths = frozen_filt_eff_wavelen + best_point
+            filter_names_unsort = frozen_filt_dict.keys() + \
+                filter_dict.keys()
+            filter_list_unsort = frozen_filt_dict.values() + \
+                filter_dict.values()
+            sort_idx = np.argsort(filter_wavelengths)
+            filter_names = [filter_names_unsort[idx] for idx in sort_idx]
+            filter_list = [filter_list_unsort[idx] for idx in sort_idx]
+
+            self.filter_dict = BandpassDict(filter_list, filter_names)
+
         self.sed_list = sed_list
 
     def plot_filters(self, fig=None):
