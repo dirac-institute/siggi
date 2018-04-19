@@ -42,7 +42,8 @@ class siggi(object):
 
     def optimize_filters(self, filt_min=300., filt_max=1100.,
                          sky_mag=19.0, sed_mags=22.0, num_filters=6,
-                         filter_type='trap',
+                         filter_type='trap', frozen_filt_dict=None,
+                         frozen_filt_eff_wavelen=None,
                          default_width=120., default_ratio=0.5,
                          adjust_widths=False, width_min=30., width_max=120.,
                          adjust_width_ratio=False, adjust_independently=False,
@@ -66,6 +67,8 @@ class siggi(object):
         self.system_wavelen_min = system_wavelen_min
         self.system_wavelen_max = system_wavelen_max
         self.adjust_ind = adjust_independently
+        self.frozen_filt_dict = frozen_filt_dict
+        self.frozen_eff_lambda = frozen_filt_eff_wavelen
 
         dim_list, x0 = self.set_dimensions(width_min, width_max,
                                            ratio_min, ratio_max)
@@ -234,7 +237,22 @@ class siggi(object):
                                         zip(filt_centers, filt_widths,
                                             filt_ratios)])
 
-        return filt_dict
+        if self.frozen_filt_dict is None:
+            return filt_dict
+        else:
+            filter_wavelengths = self.frozen_eff_lambda + filt_centers
+            filter_names_unsort = self.frozen_filt_dict.keys() + \
+                filt_dict.keys()
+            filter_list_unsort = self.frozen_filt_dict.values() + \
+                filt_dict.values()
+            if len(filter_wavelengths) != (self.num_filters +
+                                           len(self.frozen_eff_lambda)):
+                raise ValueError("Make sure frozen_filt_eff_wavelen is a list")
+            sort_idx = np.argsort(filter_wavelengths)
+            filter_names = [filter_names_unsort[idx] for idx in sort_idx]
+            filter_list = [filter_list_unsort[idx] for idx in sort_idx]
+
+            return BandpassDict(filter_list, filter_names)
 
     def calc_results(self, filt_params):
 
