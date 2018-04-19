@@ -50,7 +50,8 @@ class siggi(object):
                          system_wavelen_min=300., system_wavelen_max=1150.,
                          procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
                          acq_opt_kwargs_dict=None, checkpointing=True,
-                         optimizer_verbosity=100):
+                         optimizer_verbosity=100,
+                         parallel_backend="multiprocessing"):
 
         self.num_filters = num_filters
         self.adjust_widths = adjust_widths
@@ -79,8 +80,8 @@ class siggi(object):
                         acq_func_kwargs=acq_func_kwargs_dict,
                         acq_optimizer_kwargs=acq_opt_kwargs_dict)
 
-        with Parallel(n_jobs=procs, backend="threading",
-                      batch_size=1, verbose=optimizer_verbosity) as parallel:
+        with Parallel(n_jobs=procs, batch_size=1, backend=parallel_backend,
+                      verbose=optimizer_verbosity) as parallel:
             while i < n_opt_points:
                 if i == 0:
                     x = x0
