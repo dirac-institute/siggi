@@ -1,6 +1,8 @@
 import numpy as np
 import multiprocessing as mp
-from skopt import gp_minimize
+from skopt import gp_minimize, Optimizer
+from skopt.space import Real
+from sklearn.externals.joblib import Parallel, delayed
 from copy import deepcopy
 from functools import reduce
 from . import filters, spectra, calcIG
@@ -9,8 +11,8 @@ from .lsst_utils import BandpassDict
 __all__ = ["siggi"]
 
 
-def unwrap_self_f(arg, **kwarg):
-    return siggi.grid_results(*arg, **kwarg)
+def unwrap_self_f(arg, arg2, **kwarg):
+    return siggi.calc_results(arg, arg2, **kwarg)
 
 
 class siggi(object):
@@ -44,9 +46,11 @@ class siggi(object):
                          default_width=120., default_ratio=0.5,
                          adjust_widths=False, width_min=30., width_max=120.,
                          adjust_width_ratio=False, adjust_independently=False,
-                         ratio_min=0.5, ratio_max=0.9,
+                         ratio_min=0.5, ratio_max=0.9, starting_points=None,
                          system_wavelen_min=300., system_wavelen_max=1150.,
-                         procs=4, n_opt_points=100, skopt_kwargs_dict=None):
+                         procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
+                         acq_opt_kwargs_dict=None, checkpointing=True,
+                         optimizer_verbosity=100):
 
         self.num_filters = num_filters
         self.adjust_widths = adjust_widths
@@ -62,40 +66,78 @@ class siggi(object):
         self.system_wavelen_max = system_wavelen_max
         self.adjust_ind = adjust_independently
 
-        dim_list = [(filt_min, filt_max) for n in range(num_filters)]
-        x0 = list(np.linspace(filt_min, filt_max, num_filters))
+        dim_list, x0 = self.set_dimensions(width_min, width_max,
+                                           ratio_min, ratio_max)
 
-        if adjust_widths is True:
-            if adjust_independently is True:
-                for i in range(num_filters):
-                    dim_list.insert(0, (width_min, width_max))
+        if starting_points is not None:
+            x0 = starting_points
+
+        i = 0
+
+        opt = Optimizer(dimensions=[Real(x1, x2) for x1, x2 in dim_list],
+                        random_state=1,
+                        acq_func_kwargs=acq_func_kwargs_dict,
+                        acq_optimizer_kwargs=acq_opt_kwargs_dict)
+
+        with Parallel(n_jobs=procs, backend="threading",
+                      batch_size=1, verbose=optimizer_verbosity) as parallel:
+            while i < n_opt_points:
+                if i == 0:
+                    x = x0
+                else:
+                    x = opt.ask(n_points=procs*2)
+
+                y = parallel(delayed(unwrap_self_f)(arg1, val) for
+                             arg1, val in zip([self]*len(x), x))
+
+                opt.tell(x, y)
+
+                non_zero = np.where(np.array(y) != 0)[0]
+                i += len(non_zero)
+
+                if checkpointing is True:
+                    keep_rows = np.where(np.array(opt.yi) != 0)
+                    np.savetxt('yi.out', np.array(opt.yi)[keep_rows])
+                    np.savetxt('Xi.out', np.array(opt.Xi)[keep_rows])
+
+                print(min(opt.yi), i)
+
+        return opt
+
+    def set_dimensions(self, width_min, width_max, ratio_min, ratio_max):
+
+        dim_list = [(self.filt_min,
+                     self.filt_max) for n in range(self.num_filters)]
+        x0 = list(np.linspace(self.filt_min, self.filt_max,
+                              self.num_filters))
+
+        if self.adjust_widths is True:
+            if self.adjust_ind is True:
+                for i in range(self.num_filters):
+                    dim_list.insert(0, (width_min,
+                                        width_max))
                     x0.insert(0, self.default_width)
             else:
-                dim_list.insert(0, (width_min, width_max))
+                dim_list.insert(0, (width_min,
+                                    width_max))
                 x0.insert(0, self.default_width)
-        if adjust_width_ratio is True:
-            if adjust_independently is True:
-                for i in range(num_filters):
-                    dim_list.insert(0, (ratio_min, ratio_max))
+
+        if self.adjust_ratios is True:
+            if self.adjust_ind is True:
+                for i in range(self.num_filters):
+                    dim_list.insert(0, (ratio_min,
+                                        ratio_max))
                     x0.insert(0, self.default_ratio)
             else:
-                dim_list.insert(0, (ratio_min, ratio_max))
+                dim_list.insert(0, (ratio_min,
+                                    ratio_max))
                 x0.insert(0, self.default_ratio)
 
         print(dim_list)
 
-        skopt_kwargs = {'n_jobs': procs,
-                        'x0': x0,
-                        'n_calls': n_opt_points}
-        if skopt_kwargs_dict is not None:
-            for key, val in skopt_kwargs_dict.items():
-                skopt_kwargs[key] = val
+        return dim_list, x0
 
-        res = gp_minimize(self.grid_results, dim_list, **skopt_kwargs)
-
-        return res
-
-    def grid_results(self, filt_params):
+    def set_filters(self, filt_params):
 
         if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
             filt_centers = filt_params
@@ -190,6 +232,15 @@ class siggi(object):
                                         for f_loc, f_width, f_ratio in
                                         zip(filt_centers, filt_widths,
                                             filt_ratios)])
+
+        return filt_dict
+
+    def calc_results(self, filt_params):
+
+        filt_dict = self.set_filters(filt_params)
+
+        if filt_dict == 0:
+            return 0
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
                    sky_mag=self.sky_mag, sed_mags=self.sed_mags,
