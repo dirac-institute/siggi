@@ -9,10 +9,6 @@ from .lsst_utils import BandpassDict
 __all__ = ["siggi"]
 
 
-def unwrap_self_f(arg, **kwarg):
-    return siggi.grid_results(*arg, **kwarg)
-
-
 class siggi(object):
 
     """
@@ -62,27 +58,8 @@ class siggi(object):
         self.system_wavelen_max = system_wavelen_max
         self.adjust_ind = adjust_independently
 
-        dim_list = [(filt_min, filt_max) for n in range(num_filters)]
-        x0 = list(np.linspace(filt_min, filt_max, num_filters))
-
-        if adjust_widths is True:
-            if adjust_independently is True:
-                for i in range(num_filters):
-                    dim_list.insert(0, (width_min, width_max))
-                    x0.insert(0, self.default_width)
-            else:
-                dim_list.insert(0, (width_min, width_max))
-                x0.insert(0, self.default_width)
-        if adjust_width_ratio is True:
-            if adjust_independently is True:
-                for i in range(num_filters):
-                    dim_list.insert(0, (ratio_min, ratio_max))
-                    x0.insert(0, self.default_ratio)
-            else:
-                dim_list.insert(0, (ratio_min, ratio_max))
-                x0.insert(0, self.default_ratio)
-
-        print(dim_list)
+        dim_list, x0 = self.set_dimensions(width_min, width_max,
+                                           ratio_min, ratio_max)
 
         skopt_kwargs = {'n_jobs': procs,
                         'x0': x0,
@@ -91,11 +68,44 @@ class siggi(object):
             for key, val in skopt_kwargs_dict.items():
                 skopt_kwargs[key] = val
 
-        res = gp_minimize(self.grid_results, dim_list, **skopt_kwargs)
+        res = gp_minimize(self.calc_results, dim_list, **skopt_kwargs)
 
         return res
 
-    def grid_results(self, filt_params):
+    def set_dimensions(self, width_min, width_max, ratio_min, ratio_max):
+
+        dim_list = [(self.filt_min,
+                     self.filt_max) for n in range(self.num_filters)]
+        x0 = list(np.linspace(self.filt_min, self.filt_max,
+                              self.num_filters))
+
+        if self.adjust_widths is True:
+            if self.adjust_ind is True:
+                for i in range(self.num_filters):
+                    dim_list.insert(0, (width_min,
+                                        width_max))
+                    x0.insert(0, self.default_width)
+            else:
+                dim_list.insert(0, (width_min,
+                                    width_max))
+                x0.insert(0, self.default_width)
+
+        if self.adjust_ratios is True:
+            if self.adjust_ind is True:
+                for i in range(self.num_filters):
+                    dim_list.insert(0, (ratio_min,
+                                        ratio_max))
+                    x0.insert(0, self.default_ratio)
+            else:
+                dim_list.insert(0, (ratio_min,
+                                    ratio_max))
+                x0.insert(0, self.default_ratio)
+
+        print(dim_list)
+
+        return dim_list, x0
+
+    def set_filters(self, filt_params):
 
         if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
             filt_centers = filt_params
@@ -190,6 +200,15 @@ class siggi(object):
                                         for f_loc, f_width, f_ratio in
                                         zip(filt_centers, filt_widths,
                                             filt_ratios)])
+
+        return filt_dict
+
+    def calc_results(self, filt_params):
+
+        filt_dict = self.set_filters(filt_params)
+
+        if filt_dict == 0:
+            return 0
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
                    sky_mag=self.sky_mag, sed_mags=self.sed_mags,
