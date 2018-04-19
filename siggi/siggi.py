@@ -1,12 +1,18 @@
 import numpy as np
 import multiprocessing as mp
-from skopt import gp_minimize
+from skopt import gp_minimize, Optimizer
+from skopt.space import Real
+from sklearn.externals.joblib import Parallel, delayed
 from copy import deepcopy
 from functools import reduce
 from . import filters, spectra, calcIG
 from .lsst_utils import BandpassDict
 
 __all__ = ["siggi"]
+
+
+def unwrap_self_f(arg, arg2, **kwarg):
+    return siggi.calc_results(arg, arg2, **kwarg)
 
 
 class siggi(object):
@@ -42,7 +48,8 @@ class siggi(object):
                          adjust_width_ratio=False, adjust_independently=False,
                          ratio_min=0.5, ratio_max=0.9,
                          system_wavelen_min=300., system_wavelen_max=1150.,
-                         procs=4, n_opt_points=100, skopt_kwargs_dict=None):
+                         procs=4, n_opt_points=100, skopt_kwargs_dict=None,
+                         optimize_parallel=False):
 
         self.num_filters = num_filters
         self.adjust_widths = adjust_widths
@@ -61,16 +68,37 @@ class siggi(object):
         dim_list, x0 = self.set_dimensions(width_min, width_max,
                                            ratio_min, ratio_max)
 
-        skopt_kwargs = {'n_jobs': procs,
-                        'x0': x0,
+        skopt_kwargs = {'x0': x0,
                         'n_calls': n_opt_points}
         if skopt_kwargs_dict is not None:
             for key, val in skopt_kwargs_dict.items():
                 skopt_kwargs[key] = val
 
-        res = gp_minimize(self.calc_results, dim_list, **skopt_kwargs)
+        if optimize_parallel is False:
+            opt = gp_minimize(self.calc_results, dim_list, **skopt_kwargs)
+        else:
+            i = 0
+            opt = Optimizer(dimensions=[Real(x1, x2) for x1, x2 in dim_list],
+                            random_state=1)
+            with Parallel(n_jobs=procs, backend="threading",
+                          batch_size=1, verbose=100) as parallel:
+                while i < 10:
+                    if i == 0:
+                        x = skopt_kwargs['x0']
+                    else:
+                        x = opt.ask(n_points=procs*2)
 
-        return res
+                    y = parallel(delayed(unwrap_self_f)(arg1, val) for
+                                 arg1, val in zip([self]*len(x), x))
+
+                    opt.tell(x, y)
+
+                    non_zero = np.where(np.array(y) != 0)[0]
+                    i += len(non_zero)
+
+                    print(min(opt.yi), i)
+
+        return opt
 
     def set_dimensions(self, width_min, width_max, ratio_min, ratio_max):
 
