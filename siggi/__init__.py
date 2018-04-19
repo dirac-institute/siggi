@@ -5,3 +5,4 @@ from .filters import filters
 from .spectra import spectra
 from .calcIG import calcIG
 from .siggi import siggi
+from .plotting import plotting
