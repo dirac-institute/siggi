@@ -76,3 +76,24 @@ class plotting(object):
         plt.ylabel('Scaled Flux')
 
         return fig
+
+    def plot_color_color(self, filter_names, fig=None):
+
+        if fig is None:
+            fig = plt.figure(figsize=(12, 6))
+
+        sed_mags = {filt_name: [] for filt_name in self.filter_dict.keys()}
+        for sed_obj in self.sed_list:
+            mags = self.filter_dict.magDictForSed(sed_obj)
+            for filt_name in self.filter_dict.keys():
+                sed_mags[filt_name].append(mags[filt_name])
+
+        for key in sed_mags.keys():
+            sed_mags[key] = np.array(sed_mags[key])
+
+        plt.scatter(sed_mags[filter_names[0]] - sed_mags[filter_names[1]],
+                    sed_mags[filter_names[2]] - sed_mags[filter_names[3]])
+        plt.xlabel('%s - %s' % (filter_names[0], filter_names[1]))
+        plt.ylabel('%s - %s' % (filter_names[2], filter_names[3]))
+
+        return fig
