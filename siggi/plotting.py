@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
+from matplotlib.colors import ListedColormap, BoundaryNorm
 from . import filters
 from .lsst_utils import BandpassDict
 
@@ -77,6 +79,53 @@ class plotting(object):
 
         return fig
 
+    # The following come from the ipython notebook here:
+    # http://nbviewer.jupyter.org/github/dpsanders/matplotlib-examples/blob/master/colorline.ipynb
+
+    # Data manipulation:
+
+    def make_segments(self, x, y):
+        '''
+        Create list of line segments from x and y coordinates,
+        in the correct format for LineCollection:
+        an array of the form   numlines x (points per line) x 2 (x and y) array
+        '''
+
+        points = np.array([x, y]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        return segments
+
+    # Interface to LineCollection:
+
+    def colorline(self, x, y, z=None, cmap=plt.get_cmap('copper'),
+                  norm=plt.Normalize(0.0, 1.0), linewidth=3, alpha=1.0):
+        '''
+        Plot a colored line with coordinates x and y
+        Optionally specify colors in the array z
+        Optionally specify a colormap, a norm function and a line width
+        '''
+
+        # Default colors equally spaced on [0,1]:
+        if z is None:
+            z = np.linspace(0.0, 1.0, len(x))
+
+        # Special case if a single number:
+        # to check for numerical input -- this is a hack
+        if not hasattr(z, "__iter__"):
+            z = np.array([z])
+
+        z = np.asarray(z)
+
+        segments = self.make_segments(x, y)
+        lc = LineCollection(segments, array=z, cmap=cmap, norm=norm,
+                            linewidth=linewidth, alpha=alpha)
+
+        ax = plt.gca()
+        ax.add_collection(lc)
+
+        return lc
+
     def plot_color_color(self, filter_names, fig=None):
 
         if fig is None:
@@ -91,9 +140,23 @@ class plotting(object):
         for key in sed_mags.keys():
             sed_mags[key] = np.array(sed_mags[key])
 
-        plt.scatter(sed_mags[filter_names[0]] - sed_mags[filter_names[1]],
-                    sed_mags[filter_names[2]] - sed_mags[filter_names[3]])
+        cmap = plt.get_cmap('plasma')
+
+        for sed_num in range(2):
+            # plt.plot(sed_mags[filter_names[0]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[1]][sed_num*40:(sed_num+1)*40],
+            #             sed_mags[filter_names[2]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[3]][sed_num*40:(sed_num+1)*40], lw=4)
+            # plt.scatter(sed_mags[filter_names[0]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[1]][sed_num*40:(sed_num+1)*40],
+            #             sed_mags[filter_names[2]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[3]][sed_num*40:(sed_num+1)*40],
+            #             color=cmap(np.linspace(0,1,40)), s=200)
+            self.colorline(sed_mags[filter_names[0]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[1]][sed_num*40:(sed_num+1)*40],
+                      sed_mags[filter_names[2]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[3]][sed_num*40:(sed_num+1)*40],
+                      cmap=cmap)
+
         plt.xlabel('%s - %s' % (filter_names[0], filter_names[1]))
         plt.ylabel('%s - %s' % (filter_names[2], filter_names[3]))
+
+        # sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=2))
+        # sm._A = []
+        # plt.colorbar(sm, label='Redshift')
 
         return fig
