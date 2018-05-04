@@ -147,20 +147,23 @@ class plotting(object):
         cmap = plt.get_cmap('plasma')
         num_z = len(redshift_list)
 
+        color_1 = sed_mags[filter_names[0]] - sed_mags[filter_names[1]]
+        color_2 = sed_mags[filter_names[2]] - sed_mags[filter_names[3]]
+
         for sed_num in range(len(self.sed_list)):
 
-            self.colorline(sed_mags[filter_names[0]][sed_num*num_z:
-                                                     (sed_num+1)*num_z] -
-                           sed_mags[filter_names[1]][sed_num*num_z:
-                                                     (sed_num+1)*num_z],
-                           sed_mags[filter_names[2]][sed_num*num_z:
-                                                     (sed_num+1)*num_z] -
-                           sed_mags[filter_names[3]][sed_num*num_z:
-                                                     (sed_num+1)*num_z],
+            start_idx = sed_num*num_z
+            end_idx = start_idx + num_z
+
+            self.colorline(color_1[start_idx:end_idx],
+                           color_2[start_idx:end_idx],
                            cmap=cmap)
 
         plt.xlabel('%s - %s' % (filter_names[0], filter_names[1]))
         plt.ylabel('%s - %s' % (filter_names[2], filter_names[3]))
+
+        plt.xlim(np.min(color_1) - 0.5, np.max(color_1) + 0.5)
+        plt.ylim(np.min(color_2) - 0.5, np.max(color_2) + 0.5)
 
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0,
                                                                  vmax=2))
