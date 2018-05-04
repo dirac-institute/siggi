@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from copy import deepcopy
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from . import filters
@@ -126,37 +127,44 @@ class plotting(object):
 
         return lc
 
-    def plot_color_color(self, filter_names, fig=None):
+    def plot_color_color(self, filter_names, redshift_list, fig=None):
 
         if fig is None:
             fig = plt.figure(figsize=(12, 6))
 
         sed_mags = {filt_name: [] for filt_name in self.filter_dict.keys()}
         for sed_obj in self.sed_list:
-            mags = self.filter_dict.magDictForSed(sed_obj)
-            for filt_name in self.filter_dict.keys():
-                sed_mags[filt_name].append(mags[filt_name])
+            for z_val in redshift_list:
+                sed_copy = deepcopy(sed_obj)
+                sed_copy.redshiftSED(z_val)
+                mags = self.filter_dict.magDictForSed(sed_copy)
+                for filt_name in self.filter_dict.keys():
+                    sed_mags[filt_name].append(mags[filt_name])
 
         for key in sed_mags.keys():
             sed_mags[key] = np.array(sed_mags[key])
 
         cmap = plt.get_cmap('plasma')
+        num_z = len(redshift_list)
 
-        for sed_num in range(2):
-            # plt.plot(sed_mags[filter_names[0]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[1]][sed_num*40:(sed_num+1)*40],
-            #             sed_mags[filter_names[2]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[3]][sed_num*40:(sed_num+1)*40], lw=4)
-            # plt.scatter(sed_mags[filter_names[0]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[1]][sed_num*40:(sed_num+1)*40],
-            #             sed_mags[filter_names[2]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[3]][sed_num*40:(sed_num+1)*40],
-            #             color=cmap(np.linspace(0,1,40)), s=200)
-            self.colorline(sed_mags[filter_names[0]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[1]][sed_num*40:(sed_num+1)*40],
-                      sed_mags[filter_names[2]][sed_num*40:(sed_num+1)*40] - sed_mags[filter_names[3]][sed_num*40:(sed_num+1)*40],
-                      cmap=cmap)
+        for sed_num in range(len(self.sed_list)):
+
+            self.colorline(sed_mags[filter_names[0]][sed_num*num_z:
+                                                     (sed_num+1)*num_z] -
+                           sed_mags[filter_names[1]][sed_num*num_z:
+                                                     (sed_num+1)*num_z],
+                           sed_mags[filter_names[2]][sed_num*num_z:
+                                                     (sed_num+1)*num_z] -
+                           sed_mags[filter_names[3]][sed_num*num_z:
+                                                     (sed_num+1)*num_z],
+                           cmap=cmap)
 
         plt.xlabel('%s - %s' % (filter_names[0], filter_names[1]))
         plt.ylabel('%s - %s' % (filter_names[2], filter_names[3]))
 
-        # sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=2))
-        # sm._A = []
-        # plt.colorbar(sm, label='Redshift')
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0,
+                                                                 vmax=2))
+        sm._A = []
+        plt.colorbar(sm, label='Redshift')
 
         return fig
