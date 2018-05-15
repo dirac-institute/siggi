@@ -132,7 +132,8 @@ class plotting(object):
         return lc
 
     def plot_color_color(self, filter_names, redshift_list,
-                         cmap=plt.get_cmap('plasma'), fig=None):
+                         cmap=plt.get_cmap('plasma'), fig=None,
+                         include_err=True):
 
         if fig is None:
             fig = plt.figure(figsize=(12, 6))
@@ -179,7 +180,8 @@ class plotting(object):
         sm._A = []
         plt.colorbar(sm, label='Redshift')
 
-        plt.errorbar(col_x, col_y, xerr=err_x, yerr=err_y,
-                     ms=2, alpha=0.5, ls=' ')
+        if include_err is True:
+            plt.errorbar(col_x, col_y, xerr=err_x, yerr=err_y,
+                         ms=2, alpha=0.5, ls=' ')
 
         return fig
