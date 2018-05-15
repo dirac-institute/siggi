@@ -7,7 +7,8 @@ from scipy.spatial.distance import cdist
 from scipy import stats
 from scipy.special import gamma
 from . import Sed, Bandpass, BandpassDict, spectra
-from .lsst_utils import calcMagError_sed
+from . import calcIG
+from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
 
 __all__ = ["calcIG"]
@@ -22,7 +23,7 @@ class calcIG(object):
 
     def __init__(self, filter_dict, sed_list, sed_probs, sed_mags=22.0,
                  sky_mag=19.0, ref_filter=None, phot_params=None,
-                 fwhm_eff=1.0):
+                 fwhm_eff=1.0, debug=False):
 
         self._sed_list = []
 
@@ -57,6 +58,8 @@ class calcIG(object):
 
         self.sed_probs = np.array(sed_probs)/np.sum(sed_probs)
         self.fwhm_eff = fwhm_eff
+        
+        self.debug = debug
 
         return
 
@@ -64,10 +67,18 @@ class calcIG(object):
 
         sed_colors = []
         color_errors = []
+        snr_values = []
+        sed_mag_list = []
+
+        sky_mags = self._filter_dict.magListForSed(self.sky_spec)
 
         for sed_obj in self._sed_list:
 
-            sed_mags = self._filter_dict.magListForSed(sed_obj)
+            sed_mags_0 = self._filter_dict.magListForSed(sed_obj)
+
+            sed_mags = -2.5*np.log10(np.power(10.0, -0.4*sed_mags_0) +
+                                     np.power(10.0, -0.4*sky_mags))
+
             mag_errors = [calcMagError_sed(sed_obj, filt_a,
                                            self.sky_spec, filt,
                                            self.phot_params, self.fwhm_eff) for
@@ -82,6 +93,19 @@ class calcIG(object):
                                          mag_errors[i+1]**2.) for i
                                  in range(len(mag_errors) - 1)])
 
+            if self.debug is True:
+                snr_value = [calcSNR_sed(sed_obj, filt_a,
+                                        self.sky_spec, filt,
+                                        self.phot_params, self.fwhm_eff) for
+                            filt, filt_a in zip(self._filter_dict.values(),
+                                                self._atmos_filt_dict.values())]
+                snr_values.append(snr_value)
+                sed_mag_list.append(sed_mags)
+
+        if self.debug is True:
+            return np.array(sed_colors), np.array(color_errors), snr_values,\
+                   sed_mag_list, sky_mags
+        
         return np.array(sed_colors), np.array(color_errors)
 
     def calc_h(self):
