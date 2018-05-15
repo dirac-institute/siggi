@@ -7,7 +7,7 @@ from scipy.spatial.distance import cdist
 from scipy import stats
 from scipy.special import gamma
 from . import Sed, Bandpass, BandpassDict, spectra
-from .lsst_utils import calcMagError_sed
+from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
 
 __all__ = ["calcIG"]
@@ -60,14 +60,22 @@ class calcIG(object):
 
         return
 
-    def calc_colors(self):
+    def calc_colors(self, return_all=False):
 
         sed_colors = []
         color_errors = []
+        snr_values = []
+        sed_mag_list = []
+
+        sky_mags = self._filter_dict.magListForSed(self.sky_spec)
 
         for sed_obj in self._sed_list:
 
-            sed_mags = self._filter_dict.magListForSed(sed_obj)
+            sed_mags_0 = self._filter_dict.magListForSed(sed_obj)
+
+            sed_mags = -2.5*np.log10(np.power(10.0, -0.4*sed_mags_0) +
+                                     np.power(10.0, -0.4*sky_mags))
+
             mag_errors = [calcMagError_sed(sed_obj, filt_a,
                                            self.sky_spec, filt,
                                            self.phot_params, self.fwhm_eff) for
@@ -81,6 +89,20 @@ class calcIG(object):
             color_errors.append([np.sqrt(mag_errors[i]**2. +
                                          mag_errors[i+1]**2.) for i
                                  in range(len(mag_errors) - 1)])
+
+            if return_all is True:
+                snr_value = [calcSNR_sed(sed_obj, filt_a,
+                                         self.sky_spec, filt,
+                                         self.phot_params, self.fwhm_eff) for
+                             filt, filt_a in zip(
+                                self._filter_dict.values(),
+                                self._atmos_filt_dict.values())]
+                snr_values.append(snr_value)
+                sed_mag_list.append(sed_mags)
+
+        if return_all is True:
+            return np.array(sed_colors), np.array(color_errors), snr_values,\
+                   sed_mag_list, sky_mags
 
         return np.array(sed_colors), np.array(color_errors)
 
