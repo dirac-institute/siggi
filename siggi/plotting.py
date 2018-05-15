@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
-from . import filters
+from . import filters, calcIG
 from .lsst_utils import BandpassDict
 
 __all__ = ["plotting"]
@@ -12,7 +12,8 @@ __all__ = ["plotting"]
 class plotting(object):
 
     def __init__(self, sed_list, best_point, width, ratio,
-                 frozen_filt_dict=None, frozen_filt_eff_wavelen=None):
+                 frozen_filt_dict=None, frozen_filt_eff_wavelen=None,
+                 sky_mag=19.0, sed_mags=22.0):
 
         f = filters()
 
@@ -56,6 +57,9 @@ class plotting(object):
             self.filter_dict = BandpassDict(filter_list, filter_names)
 
         self.sed_list = sed_list
+
+        self.sky_mag = sky_mag
+        self.sed_mags = sed_mags
 
     def plot_filters(self, fig=None):
 
@@ -127,47 +131,55 @@ class plotting(object):
 
         return lc
 
-    def plot_color_color(self, filter_names, redshift_list, fig=None):
+    def plot_color_color(self, filter_names, redshift_list,
+                         cmap=plt.get_cmap('plasma'), fig=None):
 
         if fig is None:
             fig = plt.figure(figsize=(12, 6))
 
-        sed_mags = {filt_name: [] for filt_name in self.filter_dict.keys()}
+        shift_seds = []
+
         for sed_obj in self.sed_list:
             for z_val in redshift_list:
                 sed_copy = deepcopy(sed_obj)
                 sed_copy.redshiftSED(z_val)
-                mags = self.filter_dict.magDictForSed(sed_copy)
-                for filt_name in self.filter_dict.keys():
-                    sed_mags[filt_name].append(mags[filt_name])
+                shift_seds.append(sed_copy)
 
-        for key in sed_mags.keys():
-            sed_mags[key] = np.array(sed_mags[key])
+        color_x_dict = BandpassDict([self.filter_dict[filt] for filt
+                                     in filter_names[:2]], filter_names[:2])
+        color_y_dict = BandpassDict([self.filter_dict[filt] for filt
+                                     in filter_names[2:]], filter_names[2:])
 
-        cmap = plt.get_cmap('plasma')
+        calc_ig = calcIG(color_x_dict, shift_seds,
+                         np.ones(len(shift_seds)),
+                         sky_mag=self.sky_mag, sed_mags=self.sed_mags)
+        col_x, err_x = calc_ig.calc_colors()
+        calc_ig._filter_dict = color_y_dict
+        col_y, err_y = calc_ig.calc_colors()
+
         num_z = len(redshift_list)
-
-        color_1 = sed_mags[filter_names[0]] - sed_mags[filter_names[1]]
-        color_2 = sed_mags[filter_names[2]] - sed_mags[filter_names[3]]
 
         for sed_num in range(len(self.sed_list)):
 
             start_idx = sed_num*num_z
             end_idx = start_idx + num_z
 
-            self.colorline(color_1[start_idx:end_idx],
-                           color_2[start_idx:end_idx],
+            self.colorline(col_x[start_idx:end_idx],
+                           col_y[start_idx:end_idx],
                            cmap=cmap)
 
         plt.xlabel('%s - %s' % (filter_names[0], filter_names[1]))
         plt.ylabel('%s - %s' % (filter_names[2], filter_names[3]))
 
-        plt.xlim(np.min(color_1) - 0.5, np.max(color_1) + 0.5)
-        plt.ylim(np.min(color_2) - 0.5, np.max(color_2) + 0.5)
+        plt.xlim(np.min(col_x) - 0.5, np.max(col_x) + 0.5)
+        plt.ylim(np.min(col_y) - 0.5, np.max(col_y) + 0.5)
 
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0,
                                                                  vmax=2))
         sm._A = []
         plt.colorbar(sm, label='Redshift')
+
+        plt.errorbar(col_x, col_y, xerr=err_x, yerr=err_y,
+                     ms=2, alpha=0.5, ls=' ')
 
         return fig
