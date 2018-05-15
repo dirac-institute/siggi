@@ -175,8 +175,10 @@ class plotting(object):
         plt.xlim(np.min(col_x) - 0.5, np.max(col_x) + 0.5)
         plt.ylim(np.min(col_y) - 0.5, np.max(col_y) + 0.5)
 
-        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0,
-                                                                 vmax=2))
+        sm = plt.cm.ScalarMappable(cmap=cmap,
+                                   norm=plt.Normalize(
+                                       vmin=np.min(redshift_list),
+                                       vmax=np.max(redshift_list)))
         sm._A = []
         plt.colorbar(sm, label='Redshift')
 
