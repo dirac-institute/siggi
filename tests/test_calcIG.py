@@ -59,23 +59,40 @@ class testSiggi(unittest.TestCase):
                                            [1000., 60, 30]])
         filt_dict_2, atmos_filt_dict_2 = \
             BandpassDict.addSystemBandpass(trap_dict_2)
+
+        sky_fn2 = self.sky_spec.calcFluxNorm(19.0, filt_dict_2['filter_0'])
+        self.sky_spec.multiplyFluxNorm(sky_fn2)
+        sky_mags = filt_dict_2.magListForSed(self.sky_spec)
+
         sed_1 = Sed()
         sed_1.setSED(wavelen=np.linspace(200., 1500., 1301),
                      flambda=np.ones(1301))
+        imsim_f_norm = sed_1.calcFluxNorm(19.0, self.imsimBand)
+        sed_1.multiplyFluxNorm(imsim_f_norm)
         f_norm_1_0 = sed_1.calcFluxNorm(15.0, filt_dict_2['filter_0'])
         f_norm_1_1 = sed_1.calcFluxNorm(14.0, filt_dict_2['filter_1'])
         f_norm_1_2 = sed_1.calcFluxNorm(13.0, filt_dict_2['filter_2'])
-        flambda_1 = np.ones(1301)
+        flambda_1 = sed_1.flambda
         flambda_1[:500] *= f_norm_1_0
         flambda_1[500:700] *= f_norm_1_1
         flambda_1[700:] *= f_norm_1_2
         sed_1.flambda = flambda_1
 
-        test_c2 = calcIG(trap_dict_2, [sed_1], [1.0])
+        test_c2 = calcIG(trap_dict_2, [sed_1], [1.0], sed_mags=15.0,
+                         ref_filter=filt_dict_2['filter_0'])
 
-        colors2, errors2 = test_c2.calc_colors()
+        colors2, errors2, snr2, mags2, sky_m2 = test_c2.calc_colors(
+                                                        return_all=True)
 
-        np.testing.assert_almost_equal([[1.0, 1.0]], colors2, 5)
+        np.testing.assert_almost_equal(sky_mags, sky_m2)
+
+        tot_mags = -2.5*np.log10(np.power(10.0, -0.4*sky_mags) +
+                                 np.power(10.0,
+                                          -0.4*np.array([15., 14., 13.])))
+
+        test_colors_2 = [tot_mags[0] - tot_mags[1], tot_mags[1] - tot_mags[2]]
+
+        np.testing.assert_almost_equal([test_colors_2], colors2, 5)
 
     def test_calc_h(self):
 

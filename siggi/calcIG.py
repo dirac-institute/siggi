@@ -7,7 +7,6 @@ from scipy.spatial.distance import cdist
 from scipy import stats
 from scipy.special import gamma
 from . import Sed, Bandpass, BandpassDict, spectra
-from . import calcIG
 from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
 
@@ -95,8 +94,9 @@ class calcIG(object):
                 snr_value = [calcSNR_sed(sed_obj, filt_a,
                                          self.sky_spec, filt,
                                          self.phot_params, self.fwhm_eff) for
-                             filt, filt_a in zip(self._filter_dict.values(),
-                                             self._atmos_filt_dict.values())]
+                             filt, filt_a in zip(
+                                self._filter_dict.values(),
+                                self._atmos_filt_dict.values())]
                 snr_values.append(snr_value)
                 sed_mag_list.append(sed_mags)
 
