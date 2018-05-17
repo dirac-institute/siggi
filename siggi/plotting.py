@@ -155,7 +155,10 @@ class plotting(object):
                          np.ones(len(shift_seds)),
                          sky_mag=self.sky_mag, sed_mags=self.sed_mags)
         col_x, err_x = calc_ig.calc_colors()
-        calc_ig._filter_dict = color_y_dict
+
+        calc_ig = calcIG(color_y_dict, shift_seds,
+                         np.ones(len(shift_seds)),
+                         sky_mag=self.sky_mag, sed_mags=self.sed_mags)
         col_y, err_y = calc_ig.calc_colors()
 
         num_z = len(redshift_list)
