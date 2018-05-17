@@ -86,13 +86,9 @@ class testSiggi(unittest.TestCase):
 
         np.testing.assert_almost_equal(sky_mags, sky_m2)
 
-        tot_mags = -2.5*np.log10(np.power(10.0, -0.4*sky_mags) +
-                                 np.power(10.0,
-                                          -0.4*np.array([15., 14., 13.])))
+        np.testing.assert_almost_equal([[15.0, 14.0, 13.0]], mags2, 5)
 
-        test_colors_2 = [tot_mags[0] - tot_mags[1], tot_mags[1] - tot_mags[2]]
-
-        np.testing.assert_almost_equal([test_colors_2], colors2, 5)
+        np.testing.assert_almost_equal([[1.0, 1.0]], colors2, 5)
 
     def test_calc_h(self):
 

@@ -71,10 +71,7 @@ class calcIG(object):
 
         for sed_obj in self._sed_list:
 
-            sed_mags_0 = self._filter_dict.magListForSed(sed_obj)
-
-            sed_mags = -2.5*np.log10(np.power(10.0, -0.4*sed_mags_0) +
-                                     np.power(10.0, -0.4*sky_mags))
+            sed_mags = self._filter_dict.magListForSed(sed_obj)
 
             mag_errors = [calcMagError_sed(sed_obj, filt_a,
                                            self.sky_spec, filt,
