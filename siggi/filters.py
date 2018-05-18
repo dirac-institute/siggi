@@ -39,7 +39,7 @@ class filters(object):
         """
 
         if (len(np.shape(filter_details)) == 2 and
-                np.shape(filter_details[0] == 4)):
+                np.shape(filter_details)[1] == 4):
             pass
         elif (len(np.shape(filter_details)) == 1 and
               np.shape(filter_details)[0] == 4):
@@ -59,26 +59,28 @@ class filters(object):
 
             sb = np.zeros(len(wavelen_arr))
 
-            climb_width_left = band[1] - band[0]
-            climb_width_right = band[3] - band[2]
+            climb_width_l = band[1] - band[0]
+            climb_width_r = band[3] - band[2]
 
-            if climb_width_left > 0.:
-                slope_left = 1./climb_width
+            if climb_width_l > 0.:
+                slope_left = 1./climb_width_l
                 climb_values_left = np.array([slope_left*i for i in
-                                              np.arange(0, climb_width+offset,
+                                              np.arange(0,
+                                                        climb_width_l+offset,
                                                         self.wavelen_step)])
 
-                climb_steps_left = len(climb_values)
+                climb_steps_left = len(climb_values_left)
             else:
                 climb_steps_left = 0
 
-            if climb_width_right > 0.:
-                slope_right = 1./climb_width
+            if climb_width_r > 0.:
+                slope_right = 1./climb_width_r
                 climb_values_right = np.array([slope_right*i for i in
-                                               np.arange(0, climb_width+offset,
+                                               np.arange(0,
+                                                         climb_width_r+offset,
                                                          self.wavelen_step)])
 
-                climb_steps_right = len(climb_values)
+                climb_steps_right = len(climb_values_right)
             else:
                 climb_steps_right = 0
 
