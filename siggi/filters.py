@@ -25,10 +25,10 @@ class filters(object):
         Input
         -----
 
-        filter_details, numpy array, (n_filters, 3)
+        filter_details, numpy array, (n_filters, 4)
 
-            Each row should have the center location, base width, top width
-            of a filter
+            Each row should have the lower left, upper left, upper right
+            and lower right corners of the filter in wavelength space.
 
         Returns
         -------
@@ -38,13 +38,14 @@ class filters(object):
             This can then be used to calculate magnitudes on spectra
         """
 
-        if len(np.shape(filter_details)) == 2:
+        if (len(np.shape(filter_details)) == 2 and
+                np.shape(filter_details[0] == 4)):
             pass
         elif (len(np.shape(filter_details)) == 1 and
-              np.shape(filter_details)[0] == 3):
-            filter_details = np.reshape(filter_details, (1, 3))
+              np.shape(filter_details)[0] == 4):
+            filter_details = np.reshape(filter_details, (1, 4))
         else:
-            raise ValueError("Input should be (n_filters, 3) size array")
+            raise ValueError("Input should be (n_filters, 4) size array")
 
         bandpass_list = []
 
@@ -58,28 +59,39 @@ class filters(object):
 
             sb = np.zeros(len(wavelen_arr))
 
-            climb_width = (band[1] - band[2])/2.
-            # TODO: Fix this for top hat filter which fails when climb_width=0.
-            if climb_width > 0.:
-                slope = 1./climb_width
-                climb_values = np.array([slope*i for i in
-                                        np.arange(0, climb_width+offset,
-                                                  self.wavelen_step)])
+            climb_width_left = band[1] - band[0]
+            climb_width_right = band[3] - band[2]
 
-                climb_steps = len(climb_values)
+            if climb_width_left > 0.:
+                slope_left = 1./climb_width
+                climb_values_left = np.array([slope_left*i for i in
+                                              np.arange(0, climb_width+offset,
+                                                        self.wavelen_step)])
+
+                climb_steps_left = len(climb_values)
             else:
-                climb_steps = 0
+                climb_steps_left = 0
+
+            if climb_width_right > 0.:
+                slope_right = 1./climb_width
+                climb_values_right = np.array([slope_right*i for i in
+                                               np.arange(0, climb_width+offset,
+                                                         self.wavelen_step)])
+
+                climb_steps_right = len(climb_values)
+            else:
+                climb_steps_right = 0
 
             min_idx = np.where(wavelen_arr >=
-                               (band[0]-(band[1]/2.)))[0][0]
+                               band[0])[0][0]
             max_idx = np.where(wavelen_arr >=
-                               (band[0]+(band[1]/2.)))[0][0]
+                               band[3])[0][0]
 
             sb[min_idx:max_idx] = 1.0
 
-            if climb_steps > 0:
-                sb[min_idx:min_idx+climb_steps] = climb_values
-                sb[max_idx-climb_steps:max_idx] = 1. - climb_values
+            if (climb_steps_left > 0) or (climb_steps_right > 0):
+                sb[min_idx:min_idx+climb_steps_left] = climb_values_left
+                sb[max_idx-climb_steps_right:max_idx] = 1. - climb_values_right
 
             bp_object = Bandpass(wavelen=wavelen_arr, sb=sb)
 
