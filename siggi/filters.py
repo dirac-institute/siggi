@@ -91,8 +91,9 @@ class filters(object):
 
             sb[min_idx:max_idx] = 1.0
 
-            if (climb_steps_left > 0) or (climb_steps_right > 0):
+            if (climb_steps_left > 0):
                 sb[min_idx:min_idx+climb_steps_left] = climb_values_left
+            if (climb_steps_right > 0):
                 sb[max_idx-climb_steps_right:max_idx] = 1. - climb_values_right
 
             bp_object = Bandpass(wavelen=wavelen_arr, sb=sb)

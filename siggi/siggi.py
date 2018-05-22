@@ -70,8 +70,11 @@ class siggi(object):
         self.frozen_filt_dict = frozen_filt_dict
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
 
-        dim_list, x0 = self.set_dimensions(width_min, width_max,
-                                           ratio_min, ratio_max)
+        # dim_list, x0 = self.set_dimensions(width_min, width_max,
+        #                                    ratio_min, ratio_max)
+
+        dim_list, x0 = self.set_dimensions()
+        print(dim_list, x0)
 
         if starting_points is not None:
             x0 = starting_points
@@ -91,6 +94,8 @@ class siggi(object):
                 else:
                     x = opt.ask(n_points=procs*2)
 
+                print(x)
+
                 y = parallel(delayed(unwrap_self_f)(arg1, val) for
                              arg1, val in zip([self]*len(x), x))
 
@@ -108,151 +113,163 @@ class siggi(object):
 
         return opt
 
-    def set_dimensions(self, width_min, width_max, ratio_min, ratio_max):
+    def set_dimensions(self):
 
-        dim_list = [(self.filt_min,
-                     self.filt_max) for n in range(self.num_filters)]
-        x0 = list(np.linspace(self.filt_min, self.filt_max,
-                              self.num_filters))
+        dim_list = [(self.filt_min, 
+                     self.filt_max) for n in range(4*self.num_filters)]
+        x0 = [list(np.linspace(self.filt_min, self.filt_max,
+                   4*self.num_filters))]
 
-        if self.adjust_widths is True:
-            if self.adjust_ind is True:
-                for i in range(self.num_filters):
-                    dim_list.insert(0, (width_min,
-                                        width_max))
-                    x0.insert(0, self.default_width)
-            else:
-                dim_list.insert(0, (width_min,
-                                    width_max))
-                x0.insert(0, self.default_width)
+        # dim_list = [(self.filt_min,
+        #              self.filt_max) for n in range(self.num_filters)]
+        # x0 = list(np.linspace(self.filt_min, self.filt_max,
+        #                       self.num_filters))
 
-        if self.adjust_ratios is True:
-            if self.adjust_ind is True:
-                for i in range(self.num_filters):
-                    dim_list.insert(0, (ratio_min,
-                                        ratio_max))
-                    x0.insert(0, self.default_ratio)
-            else:
-                dim_list.insert(0, (ratio_min,
-                                    ratio_max))
-                x0.insert(0, self.default_ratio)
+        # if self.adjust_widths is True:
+        #     if self.adjust_ind is True:
+        #         for i in range(self.num_filters):
+        #             dim_list.insert(0, (width_min,
+        #                                 width_max))
+        #             x0.insert(0, self.default_width)
+        #     else:
+        #         dim_list.insert(0, (width_min,
+        #                             width_max))
+        #         x0.insert(0, self.default_width)
 
-        print(dim_list)
+        # if self.adjust_ratios is True:
+        #     if self.adjust_ind is True:
+        #         for i in range(self.num_filters):
+        #             dim_list.insert(0, (ratio_min,
+        #                                 ratio_max))
+        #             x0.insert(0, self.default_ratio)
+        #     else:
+        #         dim_list.insert(0, (ratio_min,
+        #                             ratio_max))
+        #         x0.insert(0, self.default_ratio)
+
+        # print(dim_list)
 
         return dim_list, x0
 
     def set_filters(self, filt_params):
 
-        if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
-            filt_centers = filt_params
-        elif (((self.adjust_ratios is False) |
-               (self.adjust_widths is False)) and
-              (self.adjust_ind is True)):
-            filt_centers = filt_params[self.num_filters:]
-        elif (((self.adjust_ratios is False) |
-               (self.adjust_widths is False)) and
-              (self.adjust_ind is False)):
-            filt_centers = filt_params[1:]
-        elif self.adjust_ind is True:
-            filt_centers = filt_params[self.num_filters*2:]
-        else:
-            filt_centers = filt_params[2:]
+        # if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
+        #     filt_centers = filt_params
+        # elif (((self.adjust_ratios is False) |
+        #        (self.adjust_widths is False)) and
+        #       (self.adjust_ind is True)):
+        #     filt_centers = filt_params[self.num_filters:]
+        # elif (((self.adjust_ratios is False) |
+        #        (self.adjust_widths is False)) and
+        #       (self.adjust_ind is False)):
+        #     filt_centers = filt_params[1:]
+        # elif self.adjust_ind is True:
+        #     filt_centers = filt_params[self.num_filters*2:]
+        # else:
+        #     filt_centers = filt_params[2:]
 
-        filt_diffs = [filt_centers[idx] - filt_centers[idx-1]
-                      for idx in range(1, len(filt_centers))]
+        filt_edges = filt_params
+
+        filt_diffs = [filt_edges[idx] - filt_edges[idx-1]
+                      for idx in range(1, len(filt_edges))]
         filt_diffs = np.array(filt_diffs, dtype=np.int)
 
-        if np.min(filt_diffs) <= 0:
+        if np.min(filt_diffs) < 0:
             return 0
 
         f = filters(self.system_wavelen_min,
                     self.system_wavelen_max)
 
-        if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
+        # if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
 
-            if filt_centers[0] - self.default_width/2. < self.filt_min:
-                return 0
-            elif filt_centers[-1] + self.default_width/2. > self.filt_max:
-                return 0
+        if filt_edges[0] < self.filt_min:
+            return 0
+        elif filt_edges[-1] > self.filt_max:
+            return 0
 
-            filt_dict = f.trap_filters([[filt_loc, self.default_width,
-                                         self.default_ratio*self.default_width]
-                                        for filt_loc in filt_centers])
+        filt_input = [filt_edges[4*i:4*(i+1)]
+                      for i in range(self.num_filters)]
 
-        elif self.adjust_ratios is False:
+        print(filt_input)
 
-            filt_widths = np.array(filt_params[:self.num_filters])
+        filt_dict = f.trap_filters(filt_input)
 
-            left_edge = np.array(filt_centers) - \
-                filt_widths/2.
-            right_edge = np.array(filt_centers) + \
-                filt_widths/2.
+        return filt_dict
 
-            if np.min(left_edge) < self.filt_min:
-                return 0
-            elif np.max(right_edge) > self.filt_max:
-                return 0
+        # elif self.adjust_ratios is False:
 
-            filt_dict = f.trap_filters([[filt_loc,
-                                         filt_width,
-                                         self.default_ratio *
-                                         filt_width]
-                                        for filt_loc, filt_width in
-                                        zip(filt_centers, filt_widths)])
+        #     filt_widths = np.array(filt_params[:self.num_filters])
 
-        elif self.adjust_widths is False:
+        #     left_edge = np.array(filt_centers) - \
+        #         filt_widths/2.
+        #     right_edge = np.array(filt_centers) + \
+        #         filt_widths/2.
 
-            if filt_centers[0] - self.default_width/2. < self.filt_min:
-                return 0
-            elif filt_centers[-1] + self.default_width/2. > self.filt_max:
-                return 0
+        #     if np.min(left_edge) < self.filt_min:
+        #         return 0
+        #     elif np.max(right_edge) > self.filt_max:
+        #         return 0
 
-            filt_ratios = np.array(filt_params[:self.num_filters])
+        #     filt_dict = f.trap_filters([[filt_loc,
+        #                                  filt_width,
+        #                                  self.default_ratio *
+        #                                  filt_width]
+        #                                 for filt_loc, filt_width in
+        #                                 zip(filt_centers, filt_widths)])
 
-            filt_dict = f.trap_filters([[filt_loc, self.default_width,
-                                         filt_ratio * self.default_width]
-                                        for filt_loc, filt_ratio in
-                                        zip(filt_centers, filt_ratios)])
+        # elif self.adjust_widths is False:
 
-        else:
+        #     if filt_centers[0] - self.default_width/2. < self.filt_min:
+        #         return 0
+        #     elif filt_centers[-1] + self.default_width/2. > self.filt_max:
+        #         return 0
 
-            filt_widths = np.array(filt_params[self.num_filters:
-                                               self.num_filters*2])
-            filt_ratios = np.array(filt_params[:self.num_filters])
+        #     filt_ratios = np.array(filt_params[:self.num_filters])
 
-            left_edge = np.array(filt_centers) - \
-                np.array(filt_widths)/2.
-            right_edge = np.array(filt_centers) + \
-                np.array(filt_widths)/2.
+        #     filt_dict = f.trap_filters([[filt_loc, self.default_width,
+        #                                  filt_ratio * self.default_width]
+        #                                 for filt_loc, filt_ratio in
+        #                                 zip(filt_centers, filt_ratios)])
 
-            if np.min(left_edge) < self.filt_min:
-                return 0
-            elif np.max(right_edge) > self.filt_max:
-                return 0
+        # else:
 
-            filt_dict = f.trap_filters([[f_loc,
-                                         f_width,
-                                         f_width * f_ratio]
-                                        for f_loc, f_width, f_ratio in
-                                        zip(filt_centers, filt_widths,
-                                            filt_ratios)])
+        #     filt_widths = np.array(filt_params[self.num_filters:
+        #                                        self.num_filters*2])
+        #     filt_ratios = np.array(filt_params[:self.num_filters])
 
-        if self.frozen_filt_dict is None:
-            return filt_dict
-        else:
-            filter_wavelengths = self.frozen_eff_lambda + filt_centers
-            filter_names_unsort = self.frozen_filt_dict.keys() + \
-                filt_dict.keys()
-            filter_list_unsort = self.frozen_filt_dict.values() + \
-                filt_dict.values()
-            if len(filter_wavelengths) != (self.num_filters +
-                                           len(self.frozen_eff_lambda)):
-                raise ValueError("Make sure frozen_filt_eff_wavelen is a list")
-            sort_idx = np.argsort(filter_wavelengths)
-            filter_names = [filter_names_unsort[idx] for idx in sort_idx]
-            filter_list = [filter_list_unsort[idx] for idx in sort_idx]
+        #     left_edge = np.array(filt_centers) - \
+        #         np.array(filt_widths)/2.
+        #     right_edge = np.array(filt_centers) + \
+        #         np.array(filt_widths)/2.
 
-            return BandpassDict(filter_list, filter_names)
+        #     if np.min(left_edge) < self.filt_min:
+        #         return 0
+        #     elif np.max(right_edge) > self.filt_max:
+        #         return 0
+
+        #     filt_dict = f.trap_filters([[f_loc,
+        #                                  f_width,
+        #                                  f_width * f_ratio]
+        #                                 for f_loc, f_width, f_ratio in
+        #                                 zip(filt_centers, filt_widths,
+        #                                     filt_ratios)])
+
+        # if self.frozen_filt_dict is None:
+        #     return filt_dict
+        # else:
+        #     filter_wavelengths = self.frozen_eff_lambda + filt_centers
+        #     filter_names_unsort = self.frozen_filt_dict.keys() + \
+        #         filt_dict.keys()
+        #     filter_list_unsort = self.frozen_filt_dict.values() + \
+        #         filt_dict.values()
+        #     if len(filter_wavelengths) != (self.num_filters +
+        #                                    len(self.frozen_eff_lambda)):
+        #         raise ValueError("Make sure frozen_filt_eff_wavelen is a list")
+        #     sort_idx = np.argsort(filter_wavelengths)
+        #     filter_names = [filter_names_unsort[idx] for idx in sort_idx]
+        #     filter_list = [filter_list_unsort[idx] for idx in sort_idx]
+
+        #     return BandpassDict(filter_list, filter_names)
 
     def calc_results(self, filt_params):
 
