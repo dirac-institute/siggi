@@ -44,9 +44,10 @@ class siggi(object):
                          sky_mag=19.0, sed_mags=22.0, num_filters=6,
                          filter_type='trap', frozen_filt_dict=None,
                          frozen_filt_eff_wavelen=None,
-                         default_width=120., default_ratio=0.5,
-                         adjust_widths=False, width_min=30., width_max=120.,
-                         adjust_width_ratio=False, adjust_independently=False,
+                         default_ratio=0.5,
+                         top_width=None, bottom_width=None,
+                         width_min=30., width_max=120.,
+                         adjust_width_ratio=True,
                          ratio_min=0.5, ratio_max=0.9, starting_points=None,
                          system_wavelen_min=300., system_wavelen_max=1150.,
                          procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
@@ -55,10 +56,9 @@ class siggi(object):
                          parallel_backend="multiprocessing"):
 
         self.num_filters = num_filters
-        self.adjust_widths = adjust_widths
+        self.top_width = top_width
+        self.bottom_width = bottom_width
         self.adjust_ratios = adjust_width_ratio
-        self.default_width = default_width
-        self.default_ratio = default_ratio
         self.width_max = width_max
         self.sky_mag = sky_mag
         self.sed_mags = sed_mags
@@ -66,7 +66,6 @@ class siggi(object):
         self.filt_max = filt_max
         self.system_wavelen_min = system_wavelen_min
         self.system_wavelen_max = system_wavelen_max
-        self.adjust_ind = adjust_independently
         self.frozen_filt_dict = frozen_filt_dict
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
 
@@ -92,9 +91,14 @@ class siggi(object):
                 if i == 0:
                     x = x0
                 else:
-                    x = opt.ask(n_points=procs*2)
-
-                print(x)
+                    x = []
+                    while len(x) < procs:
+                        x_pot = opt.ask(n_points=1)
+                        filt_input = self.validate_filter_input(x_pot[0])
+                        if filt_input is True:
+                            x.append(x_pot[0])
+                        else:
+                            opt.tell(x_pot[0], 0)
 
                 y = parallel(delayed(unwrap_self_f)(arg1, val) for
                              arg1, val in zip([self]*len(x), x))
@@ -115,15 +119,18 @@ class siggi(object):
 
     def set_dimensions(self):
 
-        dim_list = [(self.filt_min, 
+        dim_list = [(self.filt_min,
                      self.filt_max) for n in range(4*self.num_filters)]
         x0 = [list(np.linspace(self.filt_min, self.filt_max,
                    4*self.num_filters))]
 
-        # dim_list = [(self.filt_min,
-        #              self.filt_max) for n in range(self.num_filters)]
-        # x0 = list(np.linspace(self.filt_min, self.filt_max,
-        #                       self.num_filters))
+        # if self.top_width is not None:
+        #     if self.bottom_width is not None:
+        #         dim_list = [(self.filt_min,
+        #                      self.filt_max) for n in range(self.num_filters)]
+        #         left_edge = np.linspace(self.filt_min, self.filt_max,
+        #                                 self.num_filters+1)[:-1]
+        #         x0 = [list(le)]
 
         # if self.adjust_widths is True:
         #     if self.adjust_ind is True:
@@ -151,6 +158,27 @@ class siggi(object):
 
         return dim_list, x0
 
+    def validate_filter_input(self, filt_edges):
+
+        if filt_edges[0] < self.filt_min:
+            return False
+        elif filt_edges[-1] > self.filt_max:
+            return False
+
+        filt_input = [filt_edges[4*i:4*(i+1)]
+                      for i in range(self.num_filters)]
+
+        print(filt_input)
+
+        for filt_list in filt_input:
+            filt_diffs = [filt_list[idx] - filt_list[idx-1]
+                          for idx in range(1, len(filt_list))]
+            filt_diffs = np.array(filt_diffs, dtype=np.int)
+            if np.min(filt_diffs) < 0:
+                return False
+
+        return True
+
     def set_filters(self, filt_params):
 
         # if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
@@ -168,29 +196,13 @@ class siggi(object):
         # else:
         #     filt_centers = filt_params[2:]
 
-        filt_edges = filt_params
-
-        filt_diffs = [filt_edges[idx] - filt_edges[idx-1]
-                      for idx in range(1, len(filt_edges))]
-        filt_diffs = np.array(filt_diffs, dtype=np.int)
-
-        if np.min(filt_diffs) < 0:
-            return 0
+        filt_input = [filt_params[4*i:4*(i+1)]
+                      for i in range(self.num_filters)]
 
         f = filters(self.system_wavelen_min,
                     self.system_wavelen_max)
 
         # if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
-
-        if filt_edges[0] < self.filt_min:
-            return 0
-        elif filt_edges[-1] > self.filt_max:
-            return 0
-
-        filt_input = [filt_edges[4*i:4*(i+1)]
-                      for i in range(self.num_filters)]
-
-        print(filt_input)
 
         filt_dict = f.trap_filters(filt_input)
 
