@@ -44,11 +44,9 @@ class siggi(object):
                          sky_mag=19.0, sed_mags=22.0, num_filters=6,
                          filter_type='trap', frozen_filt_dict=None,
                          frozen_filt_eff_wavelen=None,
-                         default_ratio=0.5,
-                         top_width=None, bottom_width=None,
+                         set_ratio=None,
                          width_min=30., width_max=120.,
-                         adjust_width_ratio=True,
-                         ratio_min=0.5, ratio_max=0.9, starting_points=None,
+                         starting_points=None,
                          system_wavelen_min=300., system_wavelen_max=1150.,
                          procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
                          acq_opt_kwargs_dict=None, checkpointing=True,
@@ -56,10 +54,7 @@ class siggi(object):
                          parallel_backend="multiprocessing"):
 
         self.num_filters = num_filters
-        self.top_width = top_width
-        self.bottom_width = bottom_width
-        self.adjust_ratios = adjust_width_ratio
-        self.width_max = width_max
+        self.ratio = set_ratio
         self.sky_mag = sky_mag
         self.sed_mags = sed_mags
         self.filt_min = filt_min
@@ -68,9 +63,6 @@ class siggi(object):
         self.system_wavelen_max = system_wavelen_max
         self.frozen_filt_dict = frozen_filt_dict
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
-
-        # dim_list, x0 = self.set_dimensions(width_min, width_max,
-        #                                    ratio_min, ratio_max)
 
         dim_list, x0 = self.set_dimensions()
         print(dim_list, x0)
@@ -121,25 +113,31 @@ class siggi(object):
 
     def set_dimensions(self):
 
-        dim_list = [(self.filt_min,
-                     self.filt_max) for n in range(4*self.num_filters)]
+        if self.ratio is not None:
+            x0_len = 2*self.num_filters
+            dim_list = [(self.filt_min, self.filt_max)
+                        for n in range(x0_len)]
+        else:
+            x0_len = 4*self.num_filters
+            dim_list = [(self.filt_min,
+                         self.filt_max) for n in range(x0_len)]
 
         # Create multiple starting points
         x_full_space = list(np.linspace(self.filt_min, self.filt_max,
-                                        4*self.num_filters))
+                                        x0_len))
         space_length = self.filt_max - self.filt_min
         x_half_space_l = list(np.linspace(self.filt_min,
                                           self.filt_max - space_length/2.,
-                                          4*self.num_filters))
+                                          x0_len))
         x_half_space_r = list(np.linspace(self.filt_min + space_length/2.,
                                           self.filt_max,
-                                          4*self.num_filters))
+                                          x0_len))
 
         x0 = [x_full_space, x_half_space_l, x_half_space_r]
 
         for i in range(7):
             x_random = np.random.uniform(low=self.filt_min, high=self.filt_max,
-                                         size=4*self.num_filters)
+                                         size=x0_len)
             x_random = list(np.sort(x_random))
             x0.append(x_random)
 
@@ -214,8 +212,21 @@ class siggi(object):
         elif filt_edges[-1] > self.filt_max:
             return False
 
-        filt_input = [filt_edges[4*i:4*(i+1)]
-                      for i in range(self.num_filters)]      
+        if self.ratio is not None:
+
+            filt_input = []
+
+            for i in range(self.num_filters):
+                edges = np.array(filt_edges[2*i:2*(i+1)])
+                bottom_len = edges[1] - edges[0]
+                top_len = self.ratio*bottom_len
+                center = edges[0] + bottom_len/2.
+                top_left = center - top_len/2.
+                top_right = center + top_len/2.
+                filt_input.append([edges[0], top_left, top_right, edges[1]])
+        else:
+            filt_input = [filt_params[4*i:4*(i+1)]
+                          for i in range(self.num_filters)]
 
         for filt_list in filt_input:
             filt_diffs = [filt_list[idx] - filt_list[idx-1]
@@ -223,9 +234,11 @@ class siggi(object):
             filt_diffs = np.array(filt_diffs, dtype=np.int)
             if np.min(filt_diffs) < 0:
                 return False
+            elif np.max(filt_diffs) <= 0:
+                return False
 
         filt_centers = self.find_filt_centers(filt_input)
-        print(filt_centers)
+        print(filt_centers, filt_input)
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1]
                       for idx in range(1, len(filt_centers))]
         filt_diffs = np.array(filt_diffs, dtype=np.int)
@@ -251,8 +264,21 @@ class siggi(object):
         # else:
         #     filt_centers = filt_params[2:]
 
-        filt_input = [filt_params[4*i:4*(i+1)]
-                      for i in range(self.num_filters)]
+        if self.ratio is not None:
+
+            filt_input = []
+
+            for i in range(self.num_filters):
+                edges = np.array(filt_params[2*i:2*(i+1)])
+                bottom_len = edges[1] - edges[0]
+                top_len = self.ratio*bottom_len
+                center = edges[0] + bottom_len/2.
+                top_left = center - top_len/2.
+                top_right = center + top_len/2.
+                filt_input.append([edges[0], top_left, top_right, edges[1]])
+        else:
+            filt_input = [filt_params[4*i:4*(i+1)]
+                          for i in range(self.num_filters)]
 
         # print(filt_input)
 
