@@ -11,28 +11,31 @@ __all__ = ["plotting"]
 
 class plotting(object):
 
-    def __init__(self, sed_list, best_point, width, ratio,
+    def __init__(self, sed_list, best_point,
                  frozen_filt_dict=None, frozen_filt_eff_wavelen=None,
                  sky_mag=19.0, sed_mags=22.0):
 
         f = filters()
 
-        if type(width) == list:
-            if type(ratio) == list:
-                filter_info = [[filt_cent, filt_width, filt_width*filt_ratio]
-                               for filt_cent, filt_width, filt_ratio in
-                               zip(best_point, width, ratio)]
-            else:
-                filter_info = [[filt_cent, filt_width, filt_width*ratio]
-                               for filt_cent, filt_width in
-                               zip(best_point, width)]
-        elif type(ratio) == list:
-            filter_info = [[filt_cent, width, width*filt_ratio]
-                           for filt_cent, filt_ratio in
-                           zip(best_point, ratio)]
-        else:
-            filter_info = [[filt_cent, width, width*ratio]
-                           for filt_cent in best_point]
+        # if type(width) == list:
+        #     if type(ratio) == list:
+        #         filter_info = [[filt_cent, filt_width, filt_width*filt_ratio]
+        #                        for filt_cent, filt_width, filt_ratio in
+        #                        zip(best_point, width, ratio)]
+        #     else:
+        #         filter_info = [[filt_cent, filt_width, filt_width*ratio]
+        #                        for filt_cent, filt_width in
+        #                        zip(best_point, width)]
+        # elif type(ratio) == list:
+        #     filter_info = [[filt_cent, width, width*filt_ratio]
+        #                    for filt_cent, filt_ratio in
+        #                    zip(best_point, ratio)]
+        # else:
+        #     filter_info = [[filt_cent, width, width*ratio]
+        #                    for filt_cent in best_point]
+
+        filter_info = [best_point[4*i:4*(i+1)]
+                       for i in range(int(len(best_point)/4))]
 
         trap_dict = f.trap_filters(filter_info)
 

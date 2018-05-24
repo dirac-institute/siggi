@@ -92,11 +92,13 @@ class siggi(object):
                     x = x0
                 else:
                     x = []
+                    pts_needed = procs
                     while len(x) < procs:
-                        x_pot = opt.ask(n_points=1)
+                        x_pot = opt.ask(n_points=pts_needed)
                         filt_input = self.validate_filter_input(x_pot[0])
                         if filt_input is True:
                             x.append(x_pot[0])
+                            pts_needed -= 1
                         else:
                             opt.tell(x_pot[0], 0)
 
@@ -121,8 +123,25 @@ class siggi(object):
 
         dim_list = [(self.filt_min,
                      self.filt_max) for n in range(4*self.num_filters)]
-        x0 = [list(np.linspace(self.filt_min, self.filt_max,
-                   4*self.num_filters))]
+
+        # Create multiple starting points
+        x_full_space = list(np.linspace(self.filt_min, self.filt_max,
+                                        4*self.num_filters))
+        space_length = self.filt_max - self.filt_min
+        x_half_space_l = list(np.linspace(self.filt_min,
+                                          self.filt_max - space_length/2.,
+                                          4*self.num_filters))
+        x_half_space_r = list(np.linspace(self.filt_min + space_length/2.,
+                                          self.filt_max,
+                                          4*self.num_filters))
+
+        x0 = [x_full_space, x_half_space_l, x_half_space_r]
+
+        for i in range(7):
+            x_random = np.random.uniform(low=self.filt_min, high=self.filt_max,
+                                         size=4*self.num_filters)
+            x_random = list(np.sort(x_random))
+            x0.append(x_random)
 
         # if self.top_width is not None:
         #     if self.bottom_width is not None:
@@ -158,6 +177,36 @@ class siggi(object):
 
         return dim_list, x0
 
+    def find_filt_centers(self, filt_input):
+
+        filt_centers = []
+
+        for filt in filt_input:
+            a1 = (filt[1] - filt[0])/2.
+            a2 = (filt[2] - filt[1])
+            a3 = (filt[3] - filt[2])/2.
+            half_area = (a1 + a2 + a3)/2.
+
+            if a1 == half_area:
+                filt_centers.append(filt[1])
+            elif a1 > half_area:
+                frac_a1 = half_area/a1
+                length_ha = np.sqrt(frac_a1*(filt[1] - filt[0])**2.)
+                filt_centers.append(filt[0] + length_ha)
+            elif (a1+a2) > half_area:
+                half_a2 = half_area - a1
+                length_ha = (half_a2/a2)*(filt[2] - filt[1])
+                filt_centers.append(filt[1] + length_ha)
+            elif (a1+a2) == half_area:
+                filt_centers.append(filt[2])
+            else:
+                half_a3 = half_area - (a1+a2)
+                frac_a3 = half_a3/a3
+                length_ha = np.sqrt((1-frac_a3)*(filt[3]-filt[2])**2.)
+                filt_centers.append(filt[3] - length_ha)
+
+        return filt_centers
+
     def validate_filter_input(self, filt_edges):
 
         if filt_edges[0] < self.filt_min:
@@ -166,9 +215,7 @@ class siggi(object):
             return False
 
         filt_input = [filt_edges[4*i:4*(i+1)]
-                      for i in range(self.num_filters)]
-
-        print(filt_input)
+                      for i in range(self.num_filters)]      
 
         for filt_list in filt_input:
             filt_diffs = [filt_list[idx] - filt_list[idx-1]
@@ -176,6 +223,14 @@ class siggi(object):
             filt_diffs = np.array(filt_diffs, dtype=np.int)
             if np.min(filt_diffs) < 0:
                 return False
+
+        filt_centers = self.find_filt_centers(filt_input)
+        print(filt_centers)
+        filt_diffs = [filt_centers[idx] - filt_centers[idx-1]
+                      for idx in range(1, len(filt_centers))]
+        filt_diffs = np.array(filt_diffs, dtype=np.int)
+        if np.min(filt_diffs) < 0:
+            return False
 
         return True
 
@@ -198,6 +253,8 @@ class siggi(object):
 
         filt_input = [filt_params[4*i:4*(i+1)]
                       for i in range(self.num_filters)]
+
+        # print(filt_input)
 
         f = filters(self.system_wavelen_min,
                     self.system_wavelen_max)
