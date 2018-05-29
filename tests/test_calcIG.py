@@ -31,7 +31,8 @@ class testSiggi(unittest.TestCase):
 
     def test_calc_colors(self):
 
-        trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60]])
+        trap_dict = self.f.trap_filters([[740., 770., 830., 860.],
+                                         [740., 770., 830., 860.]])
         filt_dict, atmos_filt_dict = \
             BandpassDict.addSystemBandpass(trap_dict)
 
@@ -55,8 +56,9 @@ class testSiggi(unittest.TestCase):
         np.testing.assert_almost_equal(errors, [[test_error*np.sqrt(2)],
                                                 [test_error*np.sqrt(2)]])
 
-        trap_dict_2 = self.f.trap_filters([[450., 60, 30], [800, 60, 30],
-                                           [1000., 60, 30]])
+        trap_dict_2 = self.f.trap_filters([[420., 435., 465., 480.],
+                                           [770., 785., 815., 830.],
+                                           [970., 985., 1015., 1030.]])
         filt_dict_2, atmos_filt_dict_2 = \
             BandpassDict.addSystemBandpass(trap_dict_2)
 
@@ -92,7 +94,8 @@ class testSiggi(unittest.TestCase):
 
     def test_calc_h(self):
 
-        trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60]])
+        trap_dict = self.f.trap_filters([[740., 770., 830., 860.],
+                                         [740., 770., 830., 860.]])
         sed_list = [self.red_spec, self.blue_spec]
         sed_probs = [0.5, 0.5]
         test_c = calcIG(trap_dict, sed_list, sed_probs)
@@ -112,7 +115,8 @@ class testSiggi(unittest.TestCase):
 
     def test_calc_hyx(self):
 
-        trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60]])
+        trap_dict = self.f.trap_filters([[740., 770., 830., 860.],
+                                         [740., 770., 830., 860.]])
         sed_probs = [0.5, 0.5]
         test_c = calcIG(trap_dict, [self.red_spec, self.red_spec],
                         sed_probs)
@@ -125,9 +129,12 @@ class testSiggi(unittest.TestCase):
     def test_calcIG(self):
 
         # With same filter should be zero information gain. All colors = 0
-        trap_dict = self.f.trap_filters([[800., 120, 60], [800., 120, 60],
-                                         [800., 120, 60], [800., 120, 60],
-                                         [800., 120, 60], [800., 120, 60]])
+        trap_dict = self.f.trap_filters([[740., 770., 830., 860.],
+                                         [740., 770., 830., 860.],
+                                         [740., 770., 830., 860.],
+                                         [740., 770., 830., 860.],
+                                         [740., 770., 830., 860.],
+                                         [740., 770., 830., 860.]])
         sed_probs = [0.25, 0.25, 0.25, 0.25]
 
         test_c = calcIG(trap_dict, [self.red_spec, self.red_spec,
@@ -138,8 +145,9 @@ class testSiggi(unittest.TestCase):
         self.assertAlmostEqual(ig, 0., delta=0.01)
 
         # At very high signal to noise information gain should be perfect
-        trap_dict_2 = self.f.trap_filters([[400., 120, 60], [600., 120, 60],
-                                           [800., 120, 60]])
+        trap_dict_2 = self.f.trap_filters([[340., 370., 430., 460.],
+                                           [540., 570., 630., 660.],
+                                           [740., 770., 830., 860.]])
 
         sed_probs_2 = [0.25, 0.25, 0.25, 0.25]
         test_c_2 = calcIG(trap_dict_2, [self.red_spec, self.red_spec_z_1,
