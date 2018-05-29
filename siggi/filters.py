@@ -105,3 +105,38 @@ class filters(object):
             bandpass_dict = BandpassDict(bandpass_list, name_list)
 
         return bandpass_dict
+
+    def find_filt_centers(self, filter_details):
+
+        """
+        Take in the filter input corners and calculate the weighted center
+        of the filter in wavelength space.
+        """
+
+        filt_centers = []
+
+        for filt in filter_details:
+            a1 = (filt[1] - filt[0])/2.
+            a2 = (filt[2] - filt[1])
+            a3 = (filt[3] - filt[2])/2.
+            half_area = (a1 + a2 + a3)/2.
+
+            if a1 == half_area:
+                filt_centers.append(filt[1])
+            elif a1 > half_area:
+                frac_a1 = half_area/a1
+                length_ha = np.sqrt(frac_a1*(filt[1] - filt[0])**2.)
+                filt_centers.append(filt[0] + length_ha)
+            elif (a1+a2) > half_area:
+                half_a2 = half_area - a1
+                length_ha = (half_a2/a2)*(filt[2] - filt[1])
+                filt_centers.append(filt[1] + length_ha)
+            elif (a1+a2) == half_area:
+                filt_centers.append(filt[2])
+            else:
+                half_a3 = half_area - (a1+a2)
+                frac_a3 = half_a3/a3
+                length_ha = np.sqrt((1-frac_a3)*(filt[3]-filt[2])**2.)
+                filt_centers.append(filt[3] - length_ha)
+
+        return filt_centers

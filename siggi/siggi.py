@@ -59,8 +59,8 @@ class siggi(object):
         self.sed_mags = sed_mags
         self.filt_min = filt_min
         self.filt_max = filt_max
-        self.system_wavelen_min = system_wavelen_min
-        self.system_wavelen_max = system_wavelen_max
+        self.f = filters(system_wavelen_min,
+                         system_wavelen_max)
         self.frozen_filt_dict = frozen_filt_dict
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
 
@@ -141,69 +141,7 @@ class siggi(object):
             x_random = list(np.sort(x_random))
             x0.append(x_random)
 
-        # if self.top_width is not None:
-        #     if self.bottom_width is not None:
-        #         dim_list = [(self.filt_min,
-        #                      self.filt_max) for n in range(self.num_filters)]
-        #         left_edge = np.linspace(self.filt_min, self.filt_max,
-        #                                 self.num_filters+1)[:-1]
-        #         x0 = [list(le)]
-
-        # if self.adjust_widths is True:
-        #     if self.adjust_ind is True:
-        #         for i in range(self.num_filters):
-        #             dim_list.insert(0, (width_min,
-        #                                 width_max))
-        #             x0.insert(0, self.default_width)
-        #     else:
-        #         dim_list.insert(0, (width_min,
-        #                             width_max))
-        #         x0.insert(0, self.default_width)
-
-        # if self.adjust_ratios is True:
-        #     if self.adjust_ind is True:
-        #         for i in range(self.num_filters):
-        #             dim_list.insert(0, (ratio_min,
-        #                                 ratio_max))
-        #             x0.insert(0, self.default_ratio)
-        #     else:
-        #         dim_list.insert(0, (ratio_min,
-        #                             ratio_max))
-        #         x0.insert(0, self.default_ratio)
-
-        # print(dim_list)
-
         return dim_list, x0
-
-    def find_filt_centers(self, filt_input):
-
-        filt_centers = []
-
-        for filt in filt_input:
-            a1 = (filt[1] - filt[0])/2.
-            a2 = (filt[2] - filt[1])
-            a3 = (filt[3] - filt[2])/2.
-            half_area = (a1 + a2 + a3)/2.
-
-            if a1 == half_area:
-                filt_centers.append(filt[1])
-            elif a1 > half_area:
-                frac_a1 = half_area/a1
-                length_ha = np.sqrt(frac_a1*(filt[1] - filt[0])**2.)
-                filt_centers.append(filt[0] + length_ha)
-            elif (a1+a2) > half_area:
-                half_a2 = half_area - a1
-                length_ha = (half_a2/a2)*(filt[2] - filt[1])
-                filt_centers.append(filt[1] + length_ha)
-            elif (a1+a2) == half_area:
-                filt_centers.append(filt[2])
-            else:
-                half_a3 = half_area - (a1+a2)
-                frac_a3 = half_a3/a3
-                length_ha = np.sqrt((1-frac_a3)*(filt[3]-filt[2])**2.)
-                filt_centers.append(filt[3] - length_ha)
-
-        return filt_centers
 
     def validate_filter_input(self, filt_edges):
 
@@ -225,7 +163,7 @@ class siggi(object):
                 top_right = center + top_len/2.
                 filt_input.append([edges[0], top_left, top_right, edges[1]])
         else:
-            filt_input = [filt_params[4*i:4*(i+1)]
+            filt_input = [filt_edges[4*i:4*(i+1)]
                           for i in range(self.num_filters)]
 
         for filt_list in filt_input:
@@ -237,7 +175,7 @@ class siggi(object):
             elif np.max(filt_diffs) <= 0:
                 return False
 
-        filt_centers = self.find_filt_centers(filt_input)
+        filt_centers = self.f.find_filt_centers(filt_input)
         print(filt_centers, filt_input)
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1]
                       for idx in range(1, len(filt_centers))]
@@ -248,21 +186,6 @@ class siggi(object):
         return True
 
     def set_filters(self, filt_params):
-
-        # if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
-        #     filt_centers = filt_params
-        # elif (((self.adjust_ratios is False) |
-        #        (self.adjust_widths is False)) and
-        #       (self.adjust_ind is True)):
-        #     filt_centers = filt_params[self.num_filters:]
-        # elif (((self.adjust_ratios is False) |
-        #        (self.adjust_widths is False)) and
-        #       (self.adjust_ind is False)):
-        #     filt_centers = filt_params[1:]
-        # elif self.adjust_ind is True:
-        #     filt_centers = filt_params[self.num_filters*2:]
-        # else:
-        #     filt_centers = filt_params[2:]
 
         if self.ratio is not None:
 
@@ -280,91 +203,25 @@ class siggi(object):
             filt_input = [filt_params[4*i:4*(i+1)]
                           for i in range(self.num_filters)]
 
-        # print(filt_input)
+        filt_dict = self.f.trap_filters(filt_input)
 
-        f = filters(self.system_wavelen_min,
-                    self.system_wavelen_max)
+        if self.frozen_filt_dict is None:
+            return filt_dict
+        else:
+            filter_wavelengths = self.frozen_eff_lambda +\
+                self.f.find_filt_centers(filt_input)
+            filter_names_unsort = self.frozen_filt_dict.keys() +\
+                filt_dict.keys()
+            filter_list_unsort = self.frozen_filt_dict.values() +\
+                filt_dict.values()
+            if len(filter_wavelengths) != (self.num_filters +
+                                           len(self.frozen_eff_lambda)):
+                raise ValueError("Make sure frozen_filt_eff_wavelen is a list")
+            sort_idx = np.argsort(filter_wavelengths)
+            filter_names = [filter_names_unsort[idx] for idx in sort_idx]
+            filter_list = [filter_list_unsort[idx] for idx in sort_idx]
 
-        # if ((self.adjust_widths is False) and (self.adjust_ratios is False)):
-
-        filt_dict = f.trap_filters(filt_input)
-
-        return filt_dict
-
-        # elif self.adjust_ratios is False:
-
-        #     filt_widths = np.array(filt_params[:self.num_filters])
-
-        #     left_edge = np.array(filt_centers) - \
-        #         filt_widths/2.
-        #     right_edge = np.array(filt_centers) + \
-        #         filt_widths/2.
-
-        #     if np.min(left_edge) < self.filt_min:
-        #         return 0
-        #     elif np.max(right_edge) > self.filt_max:
-        #         return 0
-
-        #     filt_dict = f.trap_filters([[filt_loc,
-        #                                  filt_width,
-        #                                  self.default_ratio *
-        #                                  filt_width]
-        #                                 for filt_loc, filt_width in
-        #                                 zip(filt_centers, filt_widths)])
-
-        # elif self.adjust_widths is False:
-
-        #     if filt_centers[0] - self.default_width/2. < self.filt_min:
-        #         return 0
-        #     elif filt_centers[-1] + self.default_width/2. > self.filt_max:
-        #         return 0
-
-        #     filt_ratios = np.array(filt_params[:self.num_filters])
-
-        #     filt_dict = f.trap_filters([[filt_loc, self.default_width,
-        #                                  filt_ratio * self.default_width]
-        #                                 for filt_loc, filt_ratio in
-        #                                 zip(filt_centers, filt_ratios)])
-
-        # else:
-
-        #     filt_widths = np.array(filt_params[self.num_filters:
-        #                                        self.num_filters*2])
-        #     filt_ratios = np.array(filt_params[:self.num_filters])
-
-        #     left_edge = np.array(filt_centers) - \
-        #         np.array(filt_widths)/2.
-        #     right_edge = np.array(filt_centers) + \
-        #         np.array(filt_widths)/2.
-
-        #     if np.min(left_edge) < self.filt_min:
-        #         return 0
-        #     elif np.max(right_edge) > self.filt_max:
-        #         return 0
-
-        #     filt_dict = f.trap_filters([[f_loc,
-        #                                  f_width,
-        #                                  f_width * f_ratio]
-        #                                 for f_loc, f_width, f_ratio in
-        #                                 zip(filt_centers, filt_widths,
-        #                                     filt_ratios)])
-
-        # if self.frozen_filt_dict is None:
-        #     return filt_dict
-        # else:
-        #     filter_wavelengths = self.frozen_eff_lambda + filt_centers
-        #     filter_names_unsort = self.frozen_filt_dict.keys() + \
-        #         filt_dict.keys()
-        #     filter_list_unsort = self.frozen_filt_dict.values() + \
-        #         filt_dict.values()
-        #     if len(filter_wavelengths) != (self.num_filters +
-        #                                    len(self.frozen_eff_lambda)):
-        #         raise ValueError("Make sure frozen_filt_eff_wavelen is a list")
-        #     sort_idx = np.argsort(filter_wavelengths)
-        #     filter_names = [filter_names_unsort[idx] for idx in sort_idx]
-        #     filter_list = [filter_list_unsort[idx] for idx in sort_idx]
-
-        #     return BandpassDict(filter_list, filter_names)
+            return BandpassDict(filter_list, filter_names)
 
     def calc_results(self, filt_params):
 

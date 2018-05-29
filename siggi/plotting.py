@@ -17,23 +17,6 @@ class plotting(object):
 
         f = filters()
 
-        # if type(width) == list:
-        #     if type(ratio) == list:
-        #         filter_info = [[filt_cent, filt_width, filt_width*filt_ratio]
-        #                        for filt_cent, filt_width, filt_ratio in
-        #                        zip(best_point, width, ratio)]
-        #     else:
-        #         filter_info = [[filt_cent, filt_width, filt_width*ratio]
-        #                        for filt_cent, filt_width in
-        #                        zip(best_point, width)]
-        # elif type(ratio) == list:
-        #     filter_info = [[filt_cent, width, width*filt_ratio]
-        #                    for filt_cent, filt_ratio in
-        #                    zip(best_point, ratio)]
-        # else:
-        #     filter_info = [[filt_cent, width, width*ratio]
-        #                    for filt_cent in best_point]
-
         if set_ratio is not None:
 
             filter_info = []
@@ -46,7 +29,7 @@ class plotting(object):
                 top_left = center - top_len/2.
                 top_right = center + top_len/2.
                 filter_info.append([edges[0], top_left, top_right, edges[1]])
-        else:     
+        else:
             filter_info = [best_point[4*i:4*(i+1)]
                            for i in range(int(len(best_point)/4))]
 
@@ -61,10 +44,11 @@ class plotting(object):
             if (type(frozen_filt_eff_wavelen) != list):
                 raise ValueError("If including frozen filters, " +
                                  "need list of eff. wavelengths.")
-            filter_wavelengths = frozen_filt_eff_wavelen + best_point
-            filter_names_unsort = frozen_filt_dict.keys() + \
+            filter_wavelengths = frozen_filt_eff_wavelen +\
+                f.find_filt_centers(filter_info)
+            filter_names_unsort = frozen_filt_dict.keys() +\
                 filter_dict.keys()
-            filter_list_unsort = frozen_filt_dict.values() + \
+            filter_list_unsort = frozen_filt_dict.values() +\
                 filter_dict.values()
             sort_idx = np.argsort(filter_wavelengths)
             filter_names = [filter_names_unsort[idx] for idx in sort_idx]
