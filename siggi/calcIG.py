@@ -142,7 +142,10 @@ class calcIG(integrationUtils):
 
             y_samples = y_samples.reshape(num_points, num_colors)
 
-            y_dist = cdist(y_samples, [colors[idx]]).flatten()
+            inv_cov = np.linalg.inv(np.diagflat(errors[idx]**2.))
+
+            y_dist = cdist(y_samples, [colors[idx]], metric='mahalanobis',
+                           VI=inv_cov).flatten()
             y_sort = np.argsort(y_dist)
             y_dist = y_dist[y_sort]
             y_samples = y_samples[y_sort]
