@@ -2,10 +2,10 @@ from __future__ import division
 
 import os
 import numpy as np
-from sklearn.neighbors.kde import KernelDensity
 from scipy.spatial.distance import cdist
 from scipy import stats
 from scipy.special import gamma
+from .mathUtils import integrationUtils
 from . import Sed, Bandpass, BandpassDict, spectra
 from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
@@ -13,7 +13,7 @@ from .lsst_utils import PhotometricParameters
 __all__ = ["calcIG"]
 
 
-class calcIG(object):
+class calcIG(integrationUtils):
 
     """
     This class will take a set of SEDs and a set of filters
@@ -142,7 +142,10 @@ class calcIG(object):
 
             y_samples = y_samples.reshape(num_points, num_colors)
 
-            y_dist = cdist(y_samples, [colors[idx]]).flatten()
+            inv_cov = np.linalg.inv(np.diagflat(errors[idx]**2.))
+
+            y_dist = cdist(y_samples, [colors[idx]], metric='mahalanobis',
+                           VI=inv_cov).flatten()
             y_sort = np.argsort(y_dist)
             y_dist = y_dist[y_sort]
             y_samples = y_samples[y_sort]
@@ -168,13 +171,8 @@ class calcIG(object):
             y_dens = sed_probs[idx]*rv.pdf(y_samp, mean=colors[idx],
                                            cov=np.diagflat(errors[idx])**2.)
 
-            norm_factor = (y_distances[idx][1:]**num_colors -
-                           y_distances[idx][:-1]**num_colors)
-            norm_factor = np.append((y_distances[idx][0]**num_colors),
-                                    norm_factor)
-            norm_factor *= ((np.pi**(num_colors/2.))/gamma((num_colors/2.)+1))
-            norm_factor *= np.linalg.det(np.diag(errors[idx]) /
-                                         np.max(errors[idx]))
+            norm_factor = self.calc_integral_scaling(y_distances[idx],
+                                                     num_colors, errors[idx])
 
             hyx_i = np.nansum(norm_factor * (y_dens * np.log2(y_dens /
                                              x_dens[idx*num_points:(idx+1) *
