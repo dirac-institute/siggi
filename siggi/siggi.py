@@ -22,7 +22,8 @@ class siggi(object):
     """
 
     def __init__(self, spec_list, spec_weights, z_prior,
-                 z_min=0.05, z_max=2.5, z_steps=50):
+                 z_min=0.05, z_max=2.5, z_steps=50,
+                 calib_filter=None):
 
         self.shift_seds = []
         self.z_probs = []
@@ -38,7 +39,10 @@ class siggi(object):
         bp_dict = BandpassDict.loadTotalBandpassesFromFiles(
             bandpassDir=bp_dict_folder)
 
-        self.calib_filter = bp_dict['r']
+        if calib_filter is None:
+            self.calib_filter = bp_dict['r']
+        else:
+            self.calib_filter = calib_filter
 
     def optimize_filters(self, filt_min=300., filt_max=1100.,
                          sky_mag=19.0, sed_mags=22.0, num_filters=6,
@@ -63,6 +67,7 @@ class siggi(object):
                          system_wavelen_max)
         self.frozen_filt_dict = frozen_filt_dict
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
+        self.verbosity = optimizer_verbosity
 
         dim_list, x0 = self.set_dimensions()
         print(dim_list, x0)
@@ -78,7 +83,7 @@ class siggi(object):
                         acq_optimizer_kwargs=acq_opt_kwargs_dict)
 
         with Parallel(n_jobs=procs, batch_size=1, backend=parallel_backend,
-                      verbose=optimizer_verbosity) as parallel:
+                      verbose=self.verbosity) as parallel:
             while i < n_opt_points:
                 if i == 0:
                     x = x0
@@ -234,6 +239,7 @@ class siggi(object):
                    sky_mag=self.sky_mag, sed_mags=self.sed_mags,
                    ref_filter=self.calib_filter)
         step_result = c.calc_IG()
-        print(filt_params, step_result)
+        if self.verbosity >= 10:
+            print(filt_params, step_result)
 
         return -1.*step_result
