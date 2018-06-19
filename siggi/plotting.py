@@ -230,4 +230,5 @@ class plotting(object):
         zi_lin = interp_lin(xx, yy)
 
         extent = [np.min(xi), np.max(xi), np.min(yi), np.max(yi)]
-        plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower', extent=extent)
+        plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower', 
+                   extent=extent, interpolation='bicubic')
