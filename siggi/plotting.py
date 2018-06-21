@@ -193,7 +193,8 @@ class plotting(object):
 
         return fig
 
-    def plot_ig_space(self, test_pts, test_vals):
+    def plot_ig_space(self, test_pts, test_vals, filter_idx,
+                      return_centers=False):
 
         f = filters()
 
@@ -220,15 +221,24 @@ class plotting(object):
             filt_centers.append(f.find_filt_centers(filter_info))
 
         filt_centers = np.array(filt_centers)
-        xi, yi = filt_centers.T
+        keep_idx = []
+        for idx, filter_vals in list(enumerate(filt_centers)):
+            if np.sum(1.0*np.isnan(filter_vals)) == 0:
+                keep_idx.append(idx)
+        filt_centers = filt_centers[keep_idx]
+
+        xi, yi = filt_centers[:, filter_idx].T
         triang = tri.Triangulation(xi, yi)
 
         xx, yy = np.meshgrid(np.linspace(np.min(xi), np.max(xi), 100),
                              np.linspace(np.min(yi), np.max(yi), 100))
 
-        interp_lin = tri.LinearTriInterpolator(triang, test_vals)
+        interp_lin = tri.LinearTriInterpolator(triang, test_vals[keep_idx])
         zi_lin = interp_lin(xx, yy)
 
         extent = [np.min(xi), np.max(xi), np.min(yi), np.max(yi)]
         plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower', 
                    extent=extent, interpolation='bicubic')
+
+        if return_centers is True:
+            return xi, yi
