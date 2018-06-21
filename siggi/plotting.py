@@ -221,6 +221,7 @@ class plotting(object):
             filt_centers.append(f.find_filt_centers(filter_info))
 
         filt_centers = np.array(filt_centers)
+
         keep_idx = []
         for idx, filter_vals in list(enumerate(filt_centers)):
             if np.sum(1.0*np.isnan(filter_vals)) == 0:
