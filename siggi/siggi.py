@@ -64,11 +64,8 @@ class siggi(object):
         self.frozen_filt_dict = frozen_filt_dict
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
 
-        dim_list, x0 = self.set_dimensions()
+        dim_list, x0 = self.set_dimensions(starting_points)
         print(dim_list, x0)
-
-        if starting_points is not None:
-            x0 = starting_points
 
         i = 0
 
@@ -111,7 +108,13 @@ class siggi(object):
 
         return opt
 
-    def set_dimensions(self):
+    def set_dimensions(self, x0):
+
+        if x0 is None:
+            x0 = []
+            add_pts = 7
+        else:
+            add_pts = 7 - len(x0)
 
         if self.ratio is not None:
             x0_len = 2*self.num_filters
@@ -125,21 +128,24 @@ class siggi(object):
         # Create multiple starting points
         x_full_space = list(np.linspace(self.filt_min, self.filt_max,
                                         x0_len))
+        x0.append(x_full_space)
         space_length = self.filt_max - self.filt_min
         x_half_space_l = list(np.linspace(self.filt_min,
                                           self.filt_max - space_length/2.,
                                           x0_len))
+        x0.append(x_half_space_l)
         x_half_space_r = list(np.linspace(self.filt_min + space_length/2.,
                                           self.filt_max,
                                           x0_len))
+        x0.append(x_half_space_r)
 
-        x0 = [x_full_space, x_half_space_l, x_half_space_r]
-
-        for i in range(7):
-            x_random = np.random.uniform(low=self.filt_min, high=self.filt_max,
-                                         size=x0_len)
-            x_random = list(np.sort(x_random))
-            x0.append(x_random)
+        if add_pts > 0:
+            for i in range(add_pts):
+                x_random = np.random.uniform(low=self.filt_min,
+                                             high=self.filt_max,
+                                             size=x0_len)
+                x_random = list(np.sort(x_random))
+                x0.append(x_random)
 
         return dim_list, x0
 
