@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
+from matplotlib import tri
 from . import filters, calcIG
 from .lsst_utils import BandpassDict
 
@@ -60,6 +61,7 @@ class plotting(object):
 
         self.sky_mag = sky_mag
         self.sed_mags = sed_mags
+        self.set_ratio = set_ratio
 
     def plot_filters(self, fig=None):
 
@@ -190,3 +192,54 @@ class plotting(object):
                          ms=2, alpha=0.5, ls=' ')
 
         return fig
+
+    def plot_ig_space(self, test_pts, test_vals, filter_idx,
+                      return_centers=False):
+
+        f = filters()
+
+        filt_centers = []
+
+        for filter_set in test_pts:
+
+            if self.set_ratio is not None:
+
+                filter_info = []
+
+                for i in range(int(len(filter_set)/2)):
+                    edges = np.array(filter_set[2*i:2*(i+1)])
+                    bottom_len = edges[1] - edges[0]
+                    top_len = self.set_ratio*bottom_len
+                    center = edges[0] + bottom_len/2.
+                    top_left = center - top_len/2.
+                    top_right = center + top_len/2.
+                    filter_info.append([edges[0], top_left, top_right, edges[1]])
+            else:
+                filter_info = [filter_set[4*i:4*(i+1)]
+                               for i in range(int(len(filter_set)/4))]
+
+            filt_centers.append(f.find_filt_centers(filter_info))
+
+        filt_centers = np.array(filt_centers)
+
+        keep_idx = []
+        for idx, filter_vals in list(enumerate(filt_centers)):
+            if np.sum(1.0*np.isnan(filter_vals)) == 0:
+                keep_idx.append(idx)
+        filt_centers = filt_centers[keep_idx]
+
+        xi, yi = filt_centers[:, filter_idx].T
+        triang = tri.Triangulation(xi, yi)
+
+        xx, yy = np.meshgrid(np.linspace(np.min(xi), np.max(xi), 100),
+                             np.linspace(np.min(yi), np.max(yi), 100))
+
+        interp_lin = tri.LinearTriInterpolator(triang, test_vals[keep_idx])
+        zi_lin = interp_lin(xx, yy)
+
+        extent = [np.min(xi), np.max(xi), np.min(yi), np.max(yi)]
+        plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower', 
+                   extent=extent, interpolation='bicubic')
+
+        if return_centers is True:
+            return xi, yi
