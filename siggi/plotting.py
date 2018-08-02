@@ -189,7 +189,7 @@ class plotting(object):
 
         if include_err is True:
             plt.errorbar(col_x, col_y, xerr=err_x, yerr=err_y,
-                         ms=2, alpha=0.5, ls=' ')
+                         ms=2, alpha=0.5, ls=' ', zorder=0)
 
         return fig
 
