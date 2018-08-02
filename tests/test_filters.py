@@ -3,9 +3,6 @@ sys.path.append('..')
 import unittest
 import numpy as np
 from siggi import filters
-from siggi import Sed, Bandpass, BandpassDict
-from siggi.lsst_utils import PhotometricParameters, calcMagError_sed
-from copy import deepcopy
 
 
 class testSiggi(unittest.TestCase):
