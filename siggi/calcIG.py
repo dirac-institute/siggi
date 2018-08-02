@@ -119,7 +119,10 @@ class calcIG(integrationUtils):
 
         return h_sum
 
-    def calc_hyx(self, colors, errors):
+    def calc_hyx(self, colors, errors, rand_state=None):
+
+        if rand_state is None:
+            rand_state = np.random.RandomState()
 
         sed_probs = self.sed_probs
 
@@ -127,7 +130,7 @@ class calcIG(integrationUtils):
 
         num_seds, num_colors = np.shape(colors)
 
-        rv = stats.multivariate_normal
+        rv = rand_state.multivariate_normal
 
         y_vals = []
         y_distances = []
@@ -136,9 +139,9 @@ class calcIG(integrationUtils):
 
         for idx in range(num_seds):
 
-            y_samples = rv.rvs(mean=colors[idx],
-                               cov=np.diagflat(errors[idx]**2.),
-                               size=num_points)
+            y_samples = rv(mean=colors[idx],
+                           cov=np.diagflat(errors[idx]**2.),
+                           size=num_points)
 
             y_samples = y_samples.reshape(num_points, num_colors)
 
@@ -161,15 +164,18 @@ class calcIG(integrationUtils):
         x_dens = np.zeros(len(x_total))
 
         for idx in range(num_seds):
-            y_dens = sed_probs[idx]*rv.pdf(x_total, mean=colors[idx],
-                                           cov=np.diagflat(errors[idx])**2.)
+            pdf_dist = stats.multivariate_normal
+            y_dens = sed_probs[idx] * \
+                pdf_dist.pdf(x_total, mean=colors[idx],
+                             cov=np.diagflat(errors[idx])**2.)
             x_dens += y_dens
 
         for idx in range(num_seds):
 
             y_samp = x_total[idx*num_points:(idx+1)*num_points]
-            y_dens = sed_probs[idx]*rv.pdf(y_samp, mean=colors[idx],
-                                           cov=np.diagflat(errors[idx])**2.)
+            y_dens = sed_probs[idx] * \
+                pdf_dist.pdf(y_samp, mean=colors[idx],
+                             cov=np.diagflat(errors[idx])**2.)
 
             norm_factor = self.calc_integral_scaling(y_distances[idx],
                                                      num_colors, errors[idx])
@@ -181,11 +187,11 @@ class calcIG(integrationUtils):
 
         return -1.*hyx_sum
 
-    def calc_IG(self):
+    def calc_IG(self, rand_state=None):
 
         colors, errors = self.calc_colors()
         hy_sum = self.calc_h()
-        hyx_sum = self.calc_hyx(colors, errors)
+        hyx_sum = self.calc_hyx(colors, errors, rand_state)
 
         info_gain = hy_sum - hyx_sum
 
