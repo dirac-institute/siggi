@@ -7,7 +7,7 @@ __all__ = ["filters"]
 class filters(object):
 
     """
-    This class enables easy creation of various filters that can be loaded into
+    This class enables easy creation of various filters that are loaded into
     a Bandpass dictionary.
     """
 
@@ -22,10 +22,13 @@ class filters(object):
     def trap_filters(self, filter_details):
 
         """
+
+        Return a bandpass dictionary with trapezoid filters.
+
         Input
         -----
 
-        filter_details, numpy array, (n_filters, 4)
+        filter_details, list, (n_filters, 4)
 
             Each row should have the lower left, upper left, upper right
             and lower right corners of the filter in wavelength space.
@@ -86,7 +89,7 @@ class filters(object):
 
             min_idx = np.where(wavelen_arr >=
                                band[0])[0][0]
-            max_idx = np.where(wavelen_arr >=
+            max_idx = np.where(wavelen_arr >
                                band[3])[0][0]
 
             sb[min_idx:max_idx] = 1.0
@@ -111,7 +114,36 @@ class filters(object):
         """
         Take in the filter input corners and calculate the weighted center
         of the filter in wavelength space.
+
+        We calculate the center by finding the point where half of the
+        area under the transmission curve is to the left and half to
+        the right of the given point.
+
+        Input
+        -----
+
+        filter_details, list, (n_filters, 4)
+
+            Each row should have the lower left, upper left, upper right
+            and lower right corners of the filter in wavelength space.
+
+        Returns
+        -------
+
+        filt_centers, list of floats
+
+            The wavelength values of the calculated centers of the input
+            filters.
         """
+
+        if (len(np.shape(filter_details)) == 2 and
+                np.shape(filter_details)[1] == 4):
+            pass
+        elif (len(np.shape(filter_details)) == 1 and
+              np.shape(filter_details)[0] == 4):
+            filter_details = np.reshape(filter_details, (1, 4))
+        else:
+            raise ValueError("Input should be (n_filters, 4) size array")
 
         filt_centers = []
 
