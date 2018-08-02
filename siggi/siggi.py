@@ -55,7 +55,8 @@ class siggi(object):
                          procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
                          acq_opt_kwargs_dict=None, checkpointing=True,
                          optimizer_verbosity=100,
-                         parallel_backend="multiprocessing"):
+                         parallel_backend="multiprocessing",
+                         rand_state=None):
 
         self.num_filters = num_filters
         self.ratio = set_ratio
@@ -69,13 +70,15 @@ class siggi(object):
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
         self.verbosity = optimizer_verbosity
 
-        dim_list, x0 = self.set_dimensions(starting_points)
-        print(dim_list, x0)
+        dim_list, x0 = self.set_dimensions(starting_points,
+                                           rand_state=rand_state)
+        if self.verbosity >= 10:
+            print(dim_list, x0)
 
         i = 0
 
         opt = Optimizer(dimensions=[Real(x1, x2) for x1, x2 in dim_list],
-                        random_state=1,
+                        random_state=rand_state,
                         acq_func_kwargs=acq_func_kwargs_dict,
                         acq_optimizer_kwargs=acq_opt_kwargs_dict)
 
@@ -113,13 +116,16 @@ class siggi(object):
 
         return opt
 
-    def set_dimensions(self, x0):
+    def set_dimensions(self, x0, rand_state=None):
 
         if x0 is None:
             x0 = []
             add_pts = 7
         else:
             add_pts = 7 - len(x0)
+
+        if rand_state is None:
+            rand_state = np.random.RandomState()
 
         if self.ratio is not None:
             x0_len = 2*self.num_filters
@@ -146,9 +152,9 @@ class siggi(object):
 
         if add_pts > 0:
             for i in range(add_pts):
-                x_random = np.random.uniform(low=self.filt_min,
-                                             high=self.filt_max,
-                                             size=x0_len)
+                x_random = rand_state.uniform(low=self.filt_min,
+                                              high=self.filt_max,
+                                              size=x0_len)
                 x_random = list(np.sort(x_random))
                 x0.append(x_random)
 
@@ -244,7 +250,8 @@ class siggi(object):
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
                    sky_mag=self.sky_mag, sed_mags=self.sed_mags,
                    ref_filter=self.calib_filter)
-        step_result = c.calc_IG()
+        step_result = c.calc_IG(rand_state=np.random.RandomState(
+                        np.int(np.sum(filt_params))))
         if self.verbosity >= 10:
             print(filt_params, step_result)
 
