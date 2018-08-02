@@ -5,7 +5,7 @@ import numpy as np
 from siggi import filters
 
 
-class testSiggi(unittest.TestCase):
+class testFilters(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
