@@ -19,6 +19,40 @@ class siggi(object):
 
     """
     Class to run a complete siggi maximization run.
+
+    Input
+    -----
+
+    spec_list, list
+
+        List of spectra you wish to use as templates
+        already stored as LSST Sims SED Objects
+
+    spec_weights, list
+
+        The weight you wish to assign to each SED
+        template, usually just 1./len(spec_list)
+
+    z_prior, function
+
+        The redshift prior function you wish to use.
+
+    z_min, float
+
+        The minimum redshift for each SED
+
+    z_max, float
+
+        The maximum redshift for each SED
+
+    z_steps, int
+
+        The number of steps in the redshift grid
+
+    calib_filter, Bandpass Object, default = lsst 'r' band
+    
+        The filter you wish to use to set the sky brightness
+        and brightness of the SEDs when optimizing.
     """
 
     def __init__(self, spec_list, spec_weights, z_prior,
@@ -54,9 +88,119 @@ class siggi(object):
                          system_wavelen_min=300., system_wavelen_max=1150.,
                          procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
                          acq_opt_kwargs_dict=None, checkpointing=True,
-                         optimizer_verbosity=100,
+                         optimizer_verbosity=5,
                          parallel_backend="multiprocessing",
                          rand_state=None):
+
+        """
+        Run the optimization for redshift estimation over the input filters
+        and redshift grid. Define the brightness of the galaxies and the sky.
+        
+        Input
+        -----
+
+        filt_min, float, default = 300.
+
+            The minimum wavelength in nm of the bandpasses.
+
+        filt_max, float, default = 1100.
+
+            The maximum wavelength in nm of the bandpasses.
+
+        sky_mag, float, default = 19.0
+
+            The default magnitude of the sky background in the calib
+            filter specified when instantiating.
+
+        sed_mags, float, default = 22.0
+
+            The default magnitude of the SEDs in the calib filter
+            specified when instantiating.
+
+        num_filters, int, default = 6
+
+            The number of filters to optimize
+
+        filter_type, str, default = 'trap'
+
+            The shape of the filters. Currently can only create
+            trapezoidal shapes before the CCD response function
+            is included.
+
+        frozen_filt_dict, BandpassDict Object or None, default = None
+
+            A set of bandpasses to include in the calculation of colors
+            but not to be changed in the optimization. These will stay
+            in place while other filters are optimized.
+
+        frozen_filt_eff_wavelen, list of floats or None, default = None
+
+            If a set of frozen filters is included then a set of
+            effective wavelengths must also be added in order to sort their
+            positions when calculating colors.
+
+        set_ratio, float or None, default = None
+
+            Use this to only optimize over the width of a set of trapezoidal
+            filters with a set ratio between the top width and the bottom width
+            specified here. For instance, 1.0 will mean a top hat filter.
+
+        width_min, float, default = 30.
+
+            If set_ratio is used then this is the minimum width the bottom
+            of the filter must have.
+
+        width_max, float, default = 120.
+
+            If set_ratio is used then this is the maximum width the bottom
+            of the filter can have.
+
+        starting_points, list (n_pts, n_filters, 2 or 4) or None,
+            default = None
+            
+            This is a list of starting point for the values of the filter
+            corners. This is a list of lists where each list contains the s
+            tarting positions of the filters. 
+            
+            If set_ratio is not None then
+            each of these lists have two floats to specify the bottom left 
+            and bottom right of a filter. 
+            
+            If set_ratio is None then this is the same
+            except that the lists are four numbers where the order is bottom
+            left, top left, top right, bottom right corners of the filters.
+
+        system_wavelength_min, float, default = 300.
+
+            This is the minimum edge of the Bandpass Objects in nm.
+
+        system_wavelength_max, float default = 1150.
+
+            This is the maximum edge of the Bandpass Objects in nm.
+
+        procs, int, default = 1
+
+            This is the number of processors to use in optimization.
+
+        n_opt_points, int, default = 100
+
+            The maximum number of points to calculate the information gain
+            in the optimization.
+
+        rand_state, numpy RandomState, int or None, default = None
+
+            Provide a RandomState Object or the integer seed for a RandomState
+            in order to generate reproducible results.
+
+        Returns
+        -------
+
+        opt, Optimizer object
+
+            Contains the input and output values of the optimization. Use the
+            absolute value of opt.yi for the information gain values. The
+            corresponding filter inputs are in opt.Xi.
+        """
 
         self.num_filters = num_filters
         self.ratio = set_ratio
@@ -69,6 +213,9 @@ class siggi(object):
         self.frozen_filt_dict = frozen_filt_dict
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
         self.verbosity = optimizer_verbosity
+
+        if type(rand_state) is int:
+            rand_state = np.random.RandomState(rand_state)
 
         dim_list, x0 = self.set_dimensions(starting_points,
                                            rand_state=rand_state)

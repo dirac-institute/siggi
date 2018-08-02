@@ -65,6 +65,10 @@ class plotting(object):
 
     def plot_filters(self, fig=None):
 
+        """
+        Plot the filters over the top of the SEDs used to optimize.
+        """
+
         if fig is None:
             fig = plt.figure(figsize=(12, 6))
 
@@ -137,6 +141,11 @@ class plotting(object):
                          cmap=plt.get_cmap('plasma'), fig=None,
                          include_err=True):
 
+        """
+        Plot the color-color tracks for each SED template as a function
+        of redshift using pairs of filters.
+        """
+
         if fig is None:
             fig = plt.figure(figsize=(12, 6))
 
@@ -195,6 +204,10 @@ class plotting(object):
 
     def plot_ig_space(self, test_pts, test_vals, filter_idx,
                       return_centers=False):
+
+        """
+        Plot the information gain space by filter center position.
+        """
 
         f = filters()
 

@@ -62,6 +62,11 @@ class calcIG(integrationUtils):
 
     def calc_colors(self, return_all=False):
 
+        """
+        Calculate the colors and errors in color measurement 
+        of the SEDs in the given filters.
+        """
+
         sed_colors = []
         color_errors = []
         snr_values = []
@@ -120,6 +125,10 @@ class calcIG(integrationUtils):
         return h_sum
 
     def calc_hyx(self, colors, errors, rand_state=None):
+
+        """
+        Calculate the conditional entropy.
+        """
 
         if rand_state is None:
             rand_state = np.random.RandomState()
@@ -188,6 +197,11 @@ class calcIG(integrationUtils):
         return -1.*hyx_sum
 
     def calc_IG(self, rand_state=None):
+
+        """
+        Use the entropy and conditional entropy methods and then subtract
+        to get information gain.
+        """
 
         colors, errors = self.calc_colors()
         hy_sum = self.calc_h()
