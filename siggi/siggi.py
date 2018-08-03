@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import multiprocessing as mp
 from skopt import gp_minimize, Optimizer
@@ -69,7 +70,9 @@ class siggi(object):
                 self.shift_seds.append(spec_copy)
                 self.z_probs.append(z_prior(z_val)*weight)
 
-        bp_dict_folder = '../data/lsst_baseline_throughputs'
+        bp_dict_folder = os.path.join(os.path.dirname(__file__),
+                                      '../data',
+                                      'lsst_baseline_throughputs')
         bp_dict = BandpassDict.loadTotalBandpassesFromFiles(
             bandpassDir=bp_dict_folder)
 

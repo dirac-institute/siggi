@@ -1,9 +1,9 @@
 import sys
 sys.path.append('..')
+import os
 import unittest
-from siggi import siggi, filters, spectra, calcIG, plotting
-from siggi import Sed
-from siggi.lsst_utils import BandpassDict
+from siggi import siggi, filters, spectra, calcIG
+from siggi.lsst_utils import Bandpass, BandpassDict
 import numpy as np
 
 class testSiggi(unittest.TestCase):
@@ -15,6 +15,14 @@ class testSiggi(unittest.TestCase):
         s = spectra()
         cls.red_spec = s.get_red_spectrum()
         cls.blue_spec = s.get_blue_spectrum()
+
+
+
+        cls.frozen_dict = BandpassDict.loadTotalBandpassesFromFiles(
+                        bandpassNames=['u', 'g'],
+                        bandpassDir=os.path.join(os.path.dirname(__file__),
+                                                 '../data',
+                                                 'lsst_baseline_throughputs'))
 
         return
 
@@ -33,12 +41,6 @@ class testSiggi(unittest.TestCase):
                             [0.5, 0.5], prior_z,
                             z_min=0.1, z_max=1.0, z_steps=20)
 
-        frozen_dict = BandpassDict.loadTotalBandpassesFromFiles(
-                        bandpassDir='../data/lsst_baseline_throughputs/')
-
-        frozen_dict = BandpassDict(frozen_dict.values()[:2],
-                                   frozen_dict.keys()[:2])
-
         random_state = np.random.RandomState(23)
         num_filters = 2
         set_ratio = 1.0
@@ -51,7 +53,7 @@ class testSiggi(unittest.TestCase):
                                            optimizer_verbosity=10,
                                            procs=4, 
                                            acq_func_kwargs_dict={'kappa': 3},
-                                           frozen_filt_dict=frozen_dict,
+                                           frozen_filt_dict=self.frozen_dict,
                                            frozen_filt_eff_wavelen=[365, 477],
                                            starting_points=None,
                                            rand_state=random_state)
@@ -65,7 +67,7 @@ class testSiggi(unittest.TestCase):
                                            optimizer_verbosity=10,
                                            procs=4, 
                                            acq_func_kwargs_dict={'kappa': 3},
-                                           frozen_filt_dict=frozen_dict,
+                                           frozen_filt_dict=self.frozen_dict,
                                            frozen_filt_eff_wavelen=[365, 477],
                                            starting_points=None,
                                            rand_state=23)
