@@ -8,7 +8,7 @@ from siggi.lsst_utils import PhotometricParameters, calcMagError_sed
 from copy import deepcopy
 
 
-class testSiggi(unittest.TestCase):
+class testCalcIG(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
