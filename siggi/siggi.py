@@ -6,7 +6,7 @@ from skopt.space import Real
 from sklearn.externals.joblib import Parallel, delayed
 from copy import deepcopy
 from functools import reduce
-from . import filters, spectra, calcIG
+from . import filters, spectra, calcIG, _siggiBase
 from .lsst_utils import BandpassDict
 
 __all__ = ["siggi"]
@@ -16,7 +16,7 @@ def unwrap_self_f(arg, arg2, **kwarg):
     return siggi.calc_results(arg, arg2, **kwarg)
 
 
-class siggi(object):
+class siggi(_siggiBase):
 
     """
     Class to run a complete siggi maximization run.
@@ -51,7 +51,7 @@ class siggi(object):
         The number of steps in the redshift grid
 
     calib_filter, Bandpass Object, default = lsst 'r' band
-    
+
         The filter you wish to use to set the sky brightness
         and brightness of the SEDs when optimizing.
     """
@@ -98,7 +98,7 @@ class siggi(object):
         """
         Run the optimization for redshift estimation over the input filters
         and redshift grid. Define the brightness of the galaxies and the sky.
-        
+
         Input
         -----
 
@@ -160,15 +160,15 @@ class siggi(object):
 
         starting_points, list (n_pts, n_filters, 2 or 4) or None,
             default = None
-            
+
             This is a list of starting point for the values of the filter
             corners. This is a list of lists where each list contains the s
-            tarting positions of the filters. 
-            
+            tarting positions of the filters.
+
             If set_ratio is not None then
-            each of these lists have two floats to specify the bottom left 
-            and bottom right of a filter. 
-            
+            each of these lists have two floats to specify the bottom left
+            and bottom right of a filter.
+
             If set_ratio is None then this is the same
             except that the lists are four numbers where the order is bottom
             left, top left, top right, bottom right corners of the filters.
@@ -266,92 +266,6 @@ class siggi(object):
 
         return opt
 
-    def set_dimensions(self, x0, rand_state=None):
-
-        if x0 is None:
-            x0 = []
-            add_pts = 7
-        else:
-            add_pts = 7 - len(x0)
-
-        if rand_state is None:
-            rand_state = np.random.RandomState()
-
-        if self.ratio is not None:
-            x0_len = 2*self.num_filters
-            dim_list = [(self.filt_min, self.filt_max)
-                        for n in range(x0_len)]
-        else:
-            x0_len = 4*self.num_filters
-            dim_list = [(self.filt_min,
-                         self.filt_max) for n in range(x0_len)]
-
-        # Create multiple starting points
-        x_full_space = list(np.linspace(self.filt_min, self.filt_max,
-                                        x0_len))
-        x0.append(x_full_space)
-        space_length = self.filt_max - self.filt_min
-        x_half_space_l = list(np.linspace(self.filt_min,
-                                          self.filt_max - space_length/2.,
-                                          x0_len))
-        x0.append(x_half_space_l)
-        x_half_space_r = list(np.linspace(self.filt_min + space_length/2.,
-                                          self.filt_max,
-                                          x0_len))
-        x0.append(x_half_space_r)
-
-        if add_pts > 0:
-            for i in range(add_pts):
-                x_random = rand_state.uniform(low=self.filt_min,
-                                              high=self.filt_max,
-                                              size=x0_len)
-                x_random = list(np.sort(x_random))
-                x0.append(x_random)
-
-        return dim_list, x0
-
-    def validate_filter_input(self, filt_edges):
-
-        if filt_edges[0] < self.filt_min:
-            return False
-        elif filt_edges[-1] > self.filt_max:
-            return False
-
-        if self.ratio is not None:
-
-            filt_input = []
-
-            for i in range(self.num_filters):
-                edges = np.array(filt_edges[2*i:2*(i+1)])
-                bottom_len = edges[1] - edges[0]
-                top_len = self.ratio*bottom_len
-                center = edges[0] + bottom_len/2.
-                top_left = center - top_len/2.
-                top_right = center + top_len/2.
-                filt_input.append([edges[0], top_left, top_right, edges[1]])
-        else:
-            filt_input = [filt_edges[4*i:4*(i+1)]
-                          for i in range(self.num_filters)]
-
-        for filt_list in filt_input:
-            filt_diffs = [filt_list[idx] - filt_list[idx-1]
-                          for idx in range(1, len(filt_list))]
-            filt_diffs = np.array(filt_diffs, dtype=np.int)
-            if np.min(filt_diffs) < 0:
-                return False
-            elif np.max(filt_diffs) <= 0:
-                return False
-
-        filt_centers = self.f.find_filt_centers(filt_input)
-        print(filt_centers, filt_input)
-        filt_diffs = [filt_centers[idx] - filt_centers[idx-1]
-                      for idx in range(1, len(filt_centers))]
-        filt_diffs = np.array(filt_diffs, dtype=np.int)
-        if np.min(filt_diffs) < 0:
-            return False
-
-        return True
-
     def set_filters(self, filt_params):
 
         if self.ratio is not None:
@@ -376,7 +290,7 @@ class siggi(object):
             return filt_dict
         else:
             filter_wavelengths = self.frozen_eff_lambda +\
-                self.f.find_filt_centers(filt_input)
+                self.find_filt_centers(filt_input)
             filter_names_unsort = self.frozen_filt_dict.keys() +\
                 filt_dict.keys()
             filter_list_unsort = self.frozen_filt_dict.values() +\
