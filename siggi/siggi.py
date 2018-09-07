@@ -259,7 +259,7 @@ class siggi(_siggiBase):
                                 x.append(point)
                                 pts_needed -= 1
                             else:
-                                opt.tell(x_pot[0], 0)
+                                opt.tell(point, 0)
                             pts_tried += 1
                         print(pts_tried)
 
