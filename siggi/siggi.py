@@ -305,6 +305,9 @@ class siggi(_siggiBase):
 
                 print(min(opt.yi), i)
 
+                # Add random point information
+                opt.random_pts_used = random_points_used
+
         return opt
 
     def set_filters(self, filt_params):
