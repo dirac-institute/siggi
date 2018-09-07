@@ -256,12 +256,12 @@ class siggi(_siggiBase):
                                                          self.num_filters,
                                                          ratio=self.ratio)
                             if filt_input is True:
-                                x.append(x_pot[0])
+                                x.append(point)
                                 pts_needed -= 1
                             else:
                                 opt.tell(x_pot[0], 0)
                             pts_tried += 1
-                    print(pts_tried)
+                        print(pts_tried)
 
                 y = parallel(delayed(unwrap_self_f)(arg1, val) for
                              arg1, val in zip([self]*len(x), x))
