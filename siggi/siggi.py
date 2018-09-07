@@ -93,7 +93,7 @@ class siggi(_siggiBase):
                          acq_opt_kwargs_dict=None, checkpointing=True,
                          optimizer_verbosity=5,
                          parallel_backend="multiprocessing",
-                         rand_state=None):
+                         max_search_factor=50, rand_state=None):
 
         """
         Run the optimization for redshift estimation over the input filters
@@ -192,6 +192,18 @@ class siggi(_siggiBase):
             number of processors used then the actual number will be
             greater than this.
 
+        max_search_factor, int, default = 50
+
+            This number multiplied by the number of processors used is the
+            maximum number of points the optimizer will try to find
+            allowable filter edges before a random allowable set of numbers
+            will be chosen to fill in the remaining points in a search
+            iteration. This happens since the optimizer will try to pick points
+            where the filters are not in order of lowest filter center to
+            highest at the beginning of the optimization
+            and we want to restrict the parameter space to only where
+            this is the case in order to better optimize in shorter time.
+
         rand_state, numpy RandomState, int or None, default = None
 
             Provide a RandomState Object or the integer seed for a RandomState
@@ -211,8 +223,6 @@ class siggi(_siggiBase):
         self.ratio = set_ratio
         self.sky_mag = sky_mag
         self.sed_mags = sed_mags
-        self.filt_min = filt_min
-        self.filt_max = filt_max
         self.f = filters(system_wavelen_min,
                          system_wavelen_max)
         self.frozen_filt_dict = frozen_filt_dict
@@ -224,8 +234,8 @@ class siggi(_siggiBase):
 
         dim_list, x0 = self.set_starting_points(starting_points,
                                                 self.num_filters,
-                                                self.filt_min,
-                                                self.filt_max,
+                                                filt_min,
+                                                filt_max,
                                                 ratio=self.ratio,
                                                 rand_state=rand_state)
         if self.verbosity >= 10:
@@ -252,8 +262,8 @@ class siggi(_siggiBase):
                         for point in x_pot:
                             filt_input = \
                               self.validate_filter_input(point,
-                                                         self.filt_min,
-                                                         self.filt_max,
+                                                         filt_min,
+                                                         filt_max,
                                                          self.num_filters,
                                                          ratio=self.ratio)
                             if filt_input is True:
@@ -262,14 +272,16 @@ class siggi(_siggiBase):
                             else:
                                 opt.tell(point, 0)
                             pts_tried += 1
-                        if ((pts_tried >= 50*procs) and (pts_needed > 0)):
+                        if ((pts_tried >= max_search_factor*procs) and
+                           (pts_needed > 0)):
+
                             for add_point in range(pts_needed):
                                 if self.ratio is not None:
                                     filt_factor = 2
                                 else:
                                     filt_factor = 4
-                                next_pt = np.random.uniform(self.filt_min,
-                                                            self.filt_max,
+                                next_pt = np.random.uniform(filt_min,
+                                                            filt_max,
                                                             size=filt_factor *
                                                             self.num_filters)
                                 x.append(np.sort(next_pt))
