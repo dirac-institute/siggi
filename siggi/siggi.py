@@ -187,8 +187,10 @@ class siggi(_siggiBase):
 
         n_opt_points, int, default = 100
 
-            The maximum number of points to calculate the information gain
-            in the optimization.
+            The minimum number of points to calculate the information gain
+            in the optimization. If this is not a multiple of the
+            number of processors used then the actual number will be
+            greater than this.
 
         rand_state, numpy RandomState, int or None, default = None
 
@@ -246,8 +248,7 @@ class siggi(_siggiBase):
                     pts_needed = procs
                     pts_tried = 0
                     while len(x) < procs:
-                        x_pot = opt.ask(n_points=pts_needed)
-                        print(x_pot)
+                        x_pot = opt.ask(n_points=pts_needed, strategy='cl_max')
                         for point in x_pot:
                             filt_input = \
                               self.validate_filter_input(point,
@@ -261,6 +262,17 @@ class siggi(_siggiBase):
                             else:
                                 opt.tell(point, 0)
                             pts_tried += 1
+                        if ((pts_tried >= 50*procs) and (pts_needed > 0)):
+                            for add_point in range(pts_needed):
+                                if self.ratio is not None:
+                                    filt_factor = 2
+                                else:
+                                    filt_factor = 4
+                                next_pt = np.random.uniform(self.filt_min,
+                                                            self.filt_max,
+                                                            size=filt_factor *
+                                                            self.num_filters)
+                                x.append(np.sort(next_pt))
                         print(pts_tried)
 
                 y = parallel(delayed(unwrap_self_f)(arg1, val) for
