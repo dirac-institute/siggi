@@ -1,9 +1,5 @@
 import os
 import numpy as np
-import multiprocessing as mp
-from skopt import gp_minimize, Optimizer
-from skopt.space import Real
-from sklearn.externals.joblib import Parallel, delayed
 from copy import deepcopy
 from functools import reduce
 from . import filters, spectra, calcIG
@@ -25,6 +21,15 @@ class _siggiBase(object):
             x0 = []
             add_pts = 7
         else:
+            # Check that form is appropriate
+            if ratio is not None:
+                assert (np.shape(x0)[1] == 2*num_filters), \
+                    str("Wrong shape of x0. " +
+                        "Need 2*number of filters in each starting point.")
+            else:
+                assert (np.shape(x0)[1] == 4*num_filters), \
+                    str("Wrong shape of x0. " +
+                        "Need 4*number of filters in each starting point.")
             add_pts = 7 - len(x0)
 
         if rand_state is None:
@@ -34,24 +39,46 @@ class _siggiBase(object):
             x0_len = 2*num_filters
             dim_list = [(filt_min, filt_max)
                         for n in range(x0_len)]
+            cuts = 2
         else:
             x0_len = 4*num_filters
             dim_list = [(filt_min,
                          filt_max) for n in range(x0_len)]
+            cuts = 4
 
         # Create multiple starting points
-        x_full_space = list(np.linspace(filt_min, filt_max,
-                                        x0_len))
-        x0.append(x_full_space)
+        x_starts = list(np.linspace(filt_min, filt_max,
+                                    num_filters+1))
+        x_full_space = np.empty(x0_len)
+        for i in range(num_filters):
+            x_full_space[cuts*i] = x_starts[i]
+            x_full_space[cuts*i:cuts*(i+1)] = np.linspace(x_starts[i],
+                                                          x_starts[i+1],
+                                                          cuts)
+        x0.append(list(x_full_space))
+
         space_length = filt_max - filt_min
-        x_half_space_l = list(np.linspace(filt_min,
-                                          filt_max - space_length/2.,
-                                          x0_len))
-        x0.append(x_half_space_l)
-        x_half_space_r = list(np.linspace(filt_min + space_length/2.,
-                                          filt_max,
-                                          x0_len))
-        x0.append(x_half_space_r)
+        x_starts_l = list(np.linspace(filt_min,
+                                      filt_max - space_length/2.,
+                                      num_filters+1))
+        x_half_space_l = np.empty(x0_len)
+        for i in range(num_filters):
+            x_half_space_l[cuts*i] = x_starts_l[i]
+            x_half_space_l[cuts*i:cuts*(i+1)] = np.linspace(x_starts_l[i],
+                                                            x_starts_l[i+1],
+                                                            cuts)
+        x0.append(list(x_half_space_l))
+
+        x_starts_r = list(np.linspace(filt_min + space_length/2.,
+                                      filt_max,
+                                      num_filters+1))
+        x_half_space_r = np.empty(x0_len)
+        for i in range(num_filters):
+            x_half_space_r[cuts*i] = x_starts_l[i]
+            x_half_space_r[cuts*i:cuts*(i+1)] = np.linspace(x_starts_r[i],
+                                                            x_starts_r[i+1],
+                                                            cuts)
+        x0.append(list(x_half_space_r))
 
         if add_pts > 0:
             for i in range(add_pts):
@@ -65,6 +92,12 @@ class _siggiBase(object):
 
     def validate_filter_input(self, filt_edges, filt_min, filt_max,
                               num_filters, ratio=None):
+
+        # Make sure input is correct shape
+        if ratio is not None:
+            assert (len(filt_edges) == num_filters*2)
+        else:
+            assert (len(filt_edges) == num_filters*4)
 
         if filt_edges[0] < filt_min:
             return False
