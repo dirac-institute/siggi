@@ -242,6 +242,7 @@ class siggi(_siggiBase):
             print(dim_list, x0)
 
         i = 0
+        random_points_used = 0
 
         opt = Optimizer(dimensions=[Real(x1, x2) for x1, x2 in dim_list],
                         random_state=rand_state,
@@ -285,7 +286,9 @@ class siggi(_siggiBase):
                                                             size=filt_factor *
                                                             self.num_filters)
                                 x.append(list(np.sort(next_pt)))
+                                random_points_used += 1
                         print(pts_tried)
+                    print("Random Points Used: %i" % random_points_used)
 
                 y = parallel(delayed(unwrap_self_f)(arg1, val) for
                              arg1, val in zip([self]*len(x), x))
