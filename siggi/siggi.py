@@ -284,7 +284,7 @@ class siggi(_siggiBase):
                                                             filt_max,
                                                             size=filt_factor *
                                                             self.num_filters)
-                                x.append(np.sort(next_pt))
+                                x.append(list(np.sort(next_pt)))
                         print(pts_tried)
 
                 y = parallel(delayed(unwrap_self_f)(arg1, val) for
