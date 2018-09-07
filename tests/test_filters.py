@@ -109,24 +109,6 @@ class testFilters(unittest.TestCase):
 
         return
 
-    def test_find_filt_centers(self):
-
-        test_filters = filters()
-
-        t_f_4 = test_filters.find_filt_centers([400., 500., 600., 700.])
-        self.assertAlmostEqual(t_f_4, [550.])
-
-        # We calculate the center by finding the point where half of the
-        # area under the transmission curve is to the left and half to
-        # the right of the given point.
-        t_f_5 = test_filters.find_filt_centers([[400., 500., 600., 700.],
-                                                [400., 400., 800., 800.],
-                                                [400., 400., 400., 800.]])
-        self.assertAlmostEqual(t_f_5,
-                               [550., 600., 800 - 400/np.sqrt(2)])
-
-        return
-
     @classmethod
     def tearDownClass(cls):
         return
