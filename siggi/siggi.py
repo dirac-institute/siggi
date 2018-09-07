@@ -247,18 +247,20 @@ class siggi(_siggiBase):
                     pts_tried = 0
                     while len(x) < procs:
                         x_pot = opt.ask(n_points=pts_needed)
-                        filt_input = \
-                            self.validate_filter_input(x_pot[0],
-                                                       self.num_filters,
-                                                       self.filt_min,
-                                                       self.filt_max,
-                                                       ratio=self.ratio)
-                        if filt_input is True:
-                            x.append(x_pot[0])
-                            pts_needed -= 1
-                        else:
-                            opt.tell(x_pot[0], 0)
-                        pts_tried += 1
+                        print(x_pot)
+                        for point in x_pot:
+                            filt_input = \
+                              self.validate_filter_input(point,
+                                                         self.filt_min,
+                                                         self.filt_max,
+                                                         self.num_filters,
+                                                         ratio=self.ratio)
+                            if filt_input is True:
+                                x.append(x_pot[0])
+                                pts_needed -= 1
+                            else:
+                                opt.tell(x_pot[0], 0)
+                            pts_tried += 1
                     print(pts_tried)
 
                 y = parallel(delayed(unwrap_self_f)(arg1, val) for
