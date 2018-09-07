@@ -1,0 +1,5 @@
+# Repo Yaml
+
+coverage:
+  ignore:
+    - "siggi/lsst_utils/*.py"
