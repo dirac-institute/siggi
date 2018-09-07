@@ -1,0 +1,4 @@
+# Repo Yaml
+
+ignore:
+  - "siggi/lsst_utils"
