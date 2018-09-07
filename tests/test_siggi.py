@@ -74,7 +74,7 @@ class testSiggi(unittest.TestCase):
 
         np.testing.assert_array_equal(t_1.Xi, t_2.Xi)
         np.testing.assert_array_equal(t_1.yi, t_2.yi)
-        np.testing.assert_almost_equal(np.max(np.abs(t_1.yi)), 2.770242731)
+        np.testing.assert_almost_equal(np.max(np.abs(t_1.yi)), 2.992060199)
 
     @classmethod
     def tearDownClass(cls):
