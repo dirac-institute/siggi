@@ -54,7 +54,7 @@ class filters(object):
 
         for band in filter_details:
 
-            offset = self.wavelen_step/2.
+            offset = 1e-8
 
             wavelen_arr = np.arange(self.wavelen_min,
                                     self.wavelen_max+offset,
