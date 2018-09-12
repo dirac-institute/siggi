@@ -108,11 +108,22 @@ class testSiggi(unittest.TestCase):
                                                      300., 600., 2)
         self.assertFalse(test_input_0)
 
+        test_input_0_ratio = test_sb.validate_filter_input([400., 403., 300.,
+                                                            303.],
+                                                           300., 600., 2, 0.5)
+
+        self.assertFalse(test_input_0_ratio)
+
         # Test that proper filters get through
         test_input_1 = test_sb.validate_filter_input([300., 301., 302., 303.,
                                                       400., 401., 402., 403.],
                                                      300., 600., 2)
         self.assertTrue(test_input_1)
+
+        test_input_1_ratio = test_sb.validate_filter_input([300., 303.,
+                                                            400., 403.],
+                                                           300., 600., 2, 0.5)
+        self.assertTrue(test_input_1_ratio)
 
         # Test that filter cannot be less than min allowed wavelength
         test_input_2 = test_sb.validate_filter_input([300., 301., 302., 303.,
@@ -120,11 +131,53 @@ class testSiggi(unittest.TestCase):
                                                      301., 600., 2)
         self.assertFalse(test_input_2)
 
+        test_input_2_ratio = test_sb.validate_filter_input([300., 303.,
+                                                            400., 403.],
+                                                           301., 600., 2, 0.5)
+        self.assertFalse(test_input_2_ratio)
+
         # Test that filter cannot be more than max allowed wavelength
         test_input_3 = test_sb.validate_filter_input([300., 301., 302., 303.,
                                                       400., 401., 402., 403.],
                                                      300., 402., 2)
         self.assertFalse(test_input_3)
+
+        test_input_3_ratio = test_sb.validate_filter_input([300., 303.,
+                                                            400., 403.],
+                                                           300., 402., 2, 0.5)
+        self.assertFalse(test_input_3_ratio)
+
+        # Test that a single filter will properly be tested
+
+        test_input_4 = test_sb.validate_filter_input([300., 301., 302., 303.],
+                                                     300., 600., 1)
+
+        self.assertTrue(test_input_4)
+
+        test_input_4_ratio = test_sb.validate_filter_input([300., 303.],
+                                                           300., 600., 1, 0.5)
+
+        self.assertTrue(test_input_4_ratio)
+
+        test_input_5 = test_sb.validate_filter_input([300., 301., 302., 303.],
+                                                     301., 600., 1)
+
+        self.assertFalse(test_input_5)
+
+        test_input_5_ratio = test_sb.validate_filter_input([300., 303.],
+                                                           301., 600., 1, 0.5)
+
+        self.assertFalse(test_input_5_ratio)
+
+        test_input_6 = test_sb.validate_filter_input([300., 301., 302., 303.],
+                                                     300., 302., 1)
+
+        self.assertFalse(test_input_6)
+
+        test_input_6_ratio = test_sb.validate_filter_input([300., 303.],
+                                                           300., 302., 1, 0.5)
+
+        self.assertFalse(test_input_6_ratio)
 
 if __name__ == '__main__':
     unittest.main()

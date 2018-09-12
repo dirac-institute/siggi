@@ -129,11 +129,18 @@ class _siggiBase(object):
             elif np.max(filt_diffs) <= 0:
                 return False
 
+        # At this point if there is only one filter we are good
+        # Else we will continue and check that the filters centers
+        # Are increasing uniformly to limit the parameter space
+        if num_filters == 1:
+            return True
+
         filt_centers = self.find_filt_centers(filt_input)
         print(filt_centers, filt_input)
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1]
                       for idx in range(1, len(filt_centers))]
         filt_diffs = np.array(filt_diffs, dtype=np.int)
+
         if np.min(filt_diffs) < 0:
             return False
 
