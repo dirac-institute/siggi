@@ -63,7 +63,7 @@ class calcIG(integrationUtils):
     def calc_colors(self, return_all=False):
 
         """
-        Calculate the colors and errors in color measurement 
+        Calculate the colors and errors in color measurement
         of the SEDs in the given filters.
         """
 
