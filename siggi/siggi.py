@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import multiprocessing as mp
+import pickle
 from skopt import gp_minimize, Optimizer
 from skopt.space import Real
 from sklearn.externals.joblib import Parallel, delayed
@@ -93,7 +94,9 @@ class siggi(_siggiBase):
                          acq_opt_kwargs_dict=None, checkpointing=True,
                          optimizer_verbosity=5,
                          parallel_backend="multiprocessing",
-                         max_search_factor=50, rand_state=None):
+                         max_search_factor=50, rand_state=None,
+                         load_optimizer=None,
+                         save_optimizer=None):
 
         """
         Run the optimization for redshift estimation over the input filters
@@ -209,6 +212,18 @@ class siggi(_siggiBase):
             Provide a RandomState Object or the integer seed for a RandomState
             in order to generate reproducible results.
 
+        load_optimizer, None or scikit-optimizer optimizer object,
+            default = None
+
+            If this is a previously saved object then the optimizer will
+            continue from this state for n_opt_points. This assumes the
+            saved optimizer state ran for at least 10 points.
+
+        save_optimizer, None or str, default = None
+
+            If this is a string then it will save a copy of the state of the
+            optimizer at the end to the filename given by the string.
+
         Returns
         -------
 
@@ -244,15 +259,18 @@ class siggi(_siggiBase):
         i = 0
         random_points_used = 0
 
-        opt = Optimizer(dimensions=[Real(x1, x2) for x1, x2 in dim_list],
-                        random_state=rand_state,
-                        acq_func_kwargs=acq_func_kwargs_dict,
-                        acq_optimizer_kwargs=acq_opt_kwargs_dict)
+        if load_optimizer is None:
+            opt = Optimizer(dimensions=[Real(x1, x2) for x1, x2 in dim_list],
+                            random_state=rand_state,
+                            acq_func_kwargs=acq_func_kwargs_dict,
+                            acq_optimizer_kwargs=acq_opt_kwargs_dict)
+        else:
+            opt = load_optimizer
 
         with Parallel(n_jobs=procs, batch_size=1, backend=parallel_backend,
                       verbose=self.verbosity) as parallel:
             while i < n_opt_points:
-                if i == 0:
+                if ((i == 0) and (load_optimizer is None)):
                     x = x0
                 else:
                     x = []
@@ -307,6 +325,11 @@ class siggi(_siggiBase):
 
                 # Add random point information
                 opt.random_pts_used = random_points_used
+
+        if save_optimizer is not None:
+            f = open(save_optimizer, 'wb')
+            pickle.dump(opt, f)
+            f.close()
 
         return opt
 
