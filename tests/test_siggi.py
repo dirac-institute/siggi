@@ -6,6 +6,7 @@ from siggi import siggi, filters, spectra, calcIG
 from siggi.lsst_utils import Bandpass, BandpassDict
 import numpy as np
 
+
 class testSiggi(unittest.TestCase):
 
     @classmethod
@@ -15,8 +16,6 @@ class testSiggi(unittest.TestCase):
         s = spectra()
         cls.red_spec = s.get_red_spectrum()
         cls.blue_spec = s.get_blue_spectrum()
-
-
 
         cls.frozen_dict = BandpassDict.loadTotalBandpassesFromFiles(
                         bandpassNames=['u', 'g'],
@@ -75,8 +74,8 @@ class testSiggi(unittest.TestCase):
         np.testing.assert_array_equal(t_1.Xi, t_2.Xi)
         np.testing.assert_array_equal(t_1.yi, t_2.yi)
         np.testing.assert_almost_equal(np.max(np.abs(t_1.yi[:10])),
-                                       2.992060199)
-        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 2.992060199)
+                                       2.9921531995)
+        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 2.9921531995)
 
     @classmethod
     def tearDownClass(cls):
