@@ -2,6 +2,7 @@ import sys
 sys.path.append('..')
 import os
 import unittest
+import pickle
 from siggi import siggi, filters, spectra, calcIG
 from siggi.lsst_utils import Bandpass, BandpassDict
 import numpy as np
@@ -77,8 +78,47 @@ class testSiggi(unittest.TestCase):
                                        2.9921531995)
         self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 2.9921531995)
 
+        t_3 = sig_example.optimize_filters(num_filters=num_filters,
+                                           filt_min=300., filt_max=1100.,
+                                           sed_mags=22.0,
+                                           set_ratio=set_ratio,
+                                           system_wavelen_max=1200.,
+                                           n_opt_points=10,
+                                           optimizer_verbosity=10,
+                                           procs=4, 
+                                           acq_func_kwargs_dict={'kappa': 3},
+                                           frozen_filt_dict=self.frozen_dict,
+                                           frozen_filt_eff_wavelen=[365, 477],
+                                           starting_points=None,
+                                           save_optimizer='test.pkl',
+                                           rand_state=23)
+
+        f = open('test.pkl', 'rb')
+        test_opt = pickle.load(f)
+        f.close()
+
+        t_4 = sig_example.optimize_filters(num_filters=num_filters,
+                                           filt_min=300., filt_max=1100.,
+                                           sed_mags=22.0,
+                                           set_ratio=set_ratio,
+                                           system_wavelen_max=1200.,
+                                           n_opt_points=4,
+                                           optimizer_verbosity=10,
+                                           procs=4, 
+                                           acq_func_kwargs_dict={'kappa': 3},
+                                           frozen_filt_dict=self.frozen_dict,
+                                           frozen_filt_eff_wavelen=[365, 477],
+                                           starting_points=None,
+                                           load_optimizer=test_opt,
+                                           rand_state=23)
+        
+        np.testing.assert_array_equal(t_1.Xi, t_4.Xi)
+        np.testing.assert_array_equal(t_1.yi, t_4.yi)
+
     @classmethod
     def tearDownClass(cls):
+
+        os.remove('test.pkl')
 
         return
 
