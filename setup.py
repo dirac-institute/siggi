@@ -10,7 +10,7 @@ setup(
     description="Spectral Information Gain Optimization",
     long_description=open("README.md").read(),
     package_data={"": ["README.md", "LICENSE"],
-                  "siggi": ["data/*", 
+                  "siggi": ["data/*",
                             "data/lsst_baseline_throughputs/*"]},
     include_package_data=True,
     classifiers=[
