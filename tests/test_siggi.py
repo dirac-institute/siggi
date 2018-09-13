@@ -117,6 +117,8 @@ class testSiggi(unittest.TestCase):
     def tearDownClass(cls):
 
         os.remove('test.pkl')
+        os.remove('Xi.out')
+        os.remove('yi.out')
 
         return
 
