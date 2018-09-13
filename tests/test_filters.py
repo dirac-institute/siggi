@@ -107,6 +107,37 @@ class testFilters(unittest.TestCase):
                                                                  302, 502]],
                                       [150., 200., 250., 350.])
 
+        # Test edge cases of triangular filters
+
+        test_filters_2 = filters()
+
+        test_filt_4 = [[300.0, 300.0, 300.0, 1100.0]]
+
+        t_f_4 = test_filters_2.trap_filters(test_filt_4)
+
+        np.testing.assert_array_almost_equal(t_f_4['filter_0'].sb[:8000],
+                                             np.linspace(1.0, 0.0, 8000))
+        self.assertAlmostEqual(t_f_4['filter_0'].wavelen[8000], 1100.)
+
+        test_filt_5 = [[300.0, 300.0, 300.0, 833.6770837679521]]
+
+        t_f_5 = test_filters_2.trap_filters(test_filt_5)
+
+        max_idx = np.where(t_f_5['filter_0'].wavelen > 833.6770837679521)[0][0]
+
+        np.testing.assert_array_almost_equal(t_f_5['filter_0'].sb[:max_idx],
+                                             np.linspace(1.0, 0.0, max_idx))
+        self.assertGreaterEqual(t_f_5['filter_0'].wavelen[max_idx],
+                                833.6770837679521)
+
+        test_filt_6 = [[400., 1200., 1200., 1200.]]
+
+        t_f_6 = test_filters_2.trap_filters(test_filt_6)
+
+        np.testing.assert_array_almost_equal(t_f_6['filter_0'].sb[1000:],
+                                             np.linspace(0.0, 1.0, 8001))
+        self.assertAlmostEqual(t_f_6['filter_0'].wavelen[1000], 400.)
+
         return
 
     @classmethod

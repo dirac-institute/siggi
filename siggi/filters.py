@@ -54,7 +54,7 @@ class filters(object):
 
         for band in filter_details:
 
-            offset = 1e-8
+            offset = self.wavelen_step / 2.
 
             wavelen_arr = np.arange(self.wavelen_min,
                                     self.wavelen_max+offset,
@@ -65,39 +65,26 @@ class filters(object):
             climb_width_l = band[1] - band[0]
             climb_width_r = band[3] - band[2]
 
-            if climb_width_l > 0.:
-                slope_left = 1./climb_width_l
-                climb_values_left = np.array([slope_left*i for i in
-                                              np.arange(0,
-                                                        climb_width_l+offset,
-                                                        self.wavelen_step)])
-
-                climb_steps_left = len(climb_values_left)
-            else:
-                climb_steps_left = 0
-
-            if climb_width_r > 0.:
-                slope_right = 1./climb_width_r
-                climb_values_right = np.array([slope_right*i for i in
-                                               np.arange(0,
-                                                         climb_width_r+offset,
-                                                         self.wavelen_step)])
-
-                climb_steps_right = len(climb_values_right)
-            else:
-                climb_steps_right = 0
-
             min_idx = np.where(wavelen_arr >=
                                band[0])[0][0]
+            min_top_idx = np.where(wavelen_arr >=
+                                   band[1])[0][0]
+
             max_idx = np.where(wavelen_arr >
                                band[3])[0][0]
+            max_top_idx = np.where(wavelen_arr >=
+                                   band[2])[0][0]
+
+            climb_steps_right = max_idx - max_top_idx
+            climb_steps_left = (min_top_idx+1) - min_idx
 
             sb[min_idx:max_idx] = 1.0
 
-            if (climb_steps_left > 0):
-                sb[min_idx:min_idx+climb_steps_left] = climb_values_left
-            if (climb_steps_right > 0):
-                sb[max_idx-climb_steps_right:max_idx] = 1. - climb_values_right
+            climb_values_left = np.linspace(0., 1.0, climb_steps_left)
+            sb[min_idx:min_top_idx+1] = climb_values_left
+
+            climb_values_right = np.linspace(1.0, 0., climb_steps_right)
+            sb[max_top_idx:max_idx] = climb_values_right
 
             bp_object = Bandpass(wavelen=wavelen_arr, sb=sb)
 
