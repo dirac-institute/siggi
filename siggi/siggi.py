@@ -216,7 +216,8 @@ class siggi(_siggiBase):
             default = None
 
             If this is a previously saved object then the optimizer will
-            continue from this state for n_opt_points.
+            continue from this state for n_opt_points. This assumes the
+            saved optimizer state ran for at least 10 points.
 
         save_optimizer, None or str, default = None
 
