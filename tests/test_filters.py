@@ -1,5 +1,3 @@
-import sys
-sys.path.append('..')
 import unittest
 import numpy as np
 from siggi import filters

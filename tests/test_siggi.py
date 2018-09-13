@@ -1,5 +1,3 @@
-import sys
-sys.path.append('..')
 import os
 import unittest
 import pickle
@@ -21,7 +19,7 @@ class testSiggi(unittest.TestCase):
         cls.frozen_dict = BandpassDict.loadTotalBandpassesFromFiles(
                         bandpassNames=['u', 'g'],
                         bandpassDir=os.path.join(os.path.dirname(__file__),
-                                                 '../data',
+                                                 '../siggi/data',
                                                  'lsst_baseline_throughputs'))
 
         return
@@ -51,7 +49,7 @@ class testSiggi(unittest.TestCase):
                                            system_wavelen_max=1200.,
                                            n_opt_points=14,
                                            optimizer_verbosity=10,
-                                           procs=4, 
+                                           procs=4,
                                            acq_func_kwargs_dict={'kappa': 3},
                                            frozen_filt_dict=self.frozen_dict,
                                            frozen_filt_eff_wavelen=[365, 477],
@@ -65,7 +63,7 @@ class testSiggi(unittest.TestCase):
                                            system_wavelen_max=1200.,
                                            n_opt_points=14,
                                            optimizer_verbosity=10,
-                                           procs=4, 
+                                           procs=4,
                                            acq_func_kwargs_dict={'kappa': 3},
                                            frozen_filt_dict=self.frozen_dict,
                                            frozen_filt_eff_wavelen=[365, 477],
@@ -85,7 +83,7 @@ class testSiggi(unittest.TestCase):
                                            system_wavelen_max=1200.,
                                            n_opt_points=10,
                                            optimizer_verbosity=10,
-                                           procs=4, 
+                                           procs=4,
                                            acq_func_kwargs_dict={'kappa': 3},
                                            frozen_filt_dict=self.frozen_dict,
                                            frozen_filt_eff_wavelen=[365, 477],
@@ -104,14 +102,14 @@ class testSiggi(unittest.TestCase):
                                            system_wavelen_max=1200.,
                                            n_opt_points=4,
                                            optimizer_verbosity=10,
-                                           procs=4, 
+                                           procs=4,
                                            acq_func_kwargs_dict={'kappa': 3},
                                            frozen_filt_dict=self.frozen_dict,
                                            frozen_filt_eff_wavelen=[365, 477],
                                            starting_points=None,
                                            load_optimizer=test_opt,
                                            rand_state=23)
-        
+
         np.testing.assert_array_equal(t_1.Xi, t_4.Xi)
         np.testing.assert_array_equal(t_1.yi, t_4.yi)
 

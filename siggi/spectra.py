@@ -19,7 +19,7 @@ class spectra(object):
 
         sed_obj = Sed()
         sed_obj.readSED_flambda(os.path.join(os.path.dirname(__file__),
-                                             '../data/Inst.10E10.1Z.spec.gz'))
+                                             'data/Inst.10E10.1Z.spec.gz'))
 
         return sed_obj
 
@@ -27,7 +27,7 @@ class spectra(object):
 
         sed_obj = Sed()
         sed_obj.readSED_flambda(os.path.join(os.path.dirname(__file__),
-                                             '../data/Inst.64E08.1Z.spec.gz'))
+                                             'data/Inst.64E08.1Z.spec.gz'))
 
         return sed_obj
 
@@ -35,7 +35,7 @@ class spectra(object):
 
         sed_obj = Sed()
         sky_sed = os.path.join(os.path.dirname(__file__),
-                               '../data/lsst_baseline_throughputs',
+                               'data/lsst_baseline_throughputs',
                                'darksky.dat')
         sed_obj.readSED_flambda(sky_sed)
 

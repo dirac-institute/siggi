@@ -158,12 +158,16 @@ class BandpassDict(object):
 
     @classmethod
     def addSystemBandpass(cls, filter_dict,
-                          bandpassDir=os.path.join(os.path.dirname(__file__),
-                                             '../../data/lsst_baseline_throughputs'),
+                          bandpassDir=None,
                           components=['detector.dat', 'm1.dat', 'm2.dat',
                                       'm3.dat', 'lens1.dat',
                                       'lens2.dat', 'lens3.dat'],
                           atmosFile='atmos_std.dat'):
+
+        if bandpassDir is None:
+            bandpassDir = os.path.join(os.path.dirname(__file__),
+                                       '..', 'data',
+                                       'lsst_baseline_throughputs')
 
         comp_list = [os.path.join(bandpassDir, comp) for comp in components]
         comp_atmos_list = comp_list + [os.path.join(bandpassDir, atmosFile)]

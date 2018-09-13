@@ -1,5 +1,3 @@
-import sys
-sys.path.append('..')
 import os
 import unittest
 from siggi import _siggiBase, filters, spectra, calcIG
@@ -20,7 +18,7 @@ class testSiggi(unittest.TestCase):
         cls.frozen_dict = BandpassDict.loadTotalBandpassesFromFiles(
                         bandpassNames=['u', 'g'],
                         bandpassDir=os.path.join(os.path.dirname(__file__),
-                                                 '../data',
+                                                 '../siggi/data',
                                                  'lsst_baseline_throughputs'))
 
         return

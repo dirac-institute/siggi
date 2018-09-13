@@ -72,7 +72,7 @@ class siggi(_siggiBase):
                 self.z_probs.append(z_prior(z_val)*weight)
 
         bp_dict_folder = os.path.join(os.path.dirname(__file__),
-                                      '../data',
+                                      'data',
                                       'lsst_baseline_throughputs')
         bp_dict = BandpassDict.loadTotalBandpassesFromFiles(
             bandpassDir=bp_dict_folder)
