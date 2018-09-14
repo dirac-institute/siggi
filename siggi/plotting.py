@@ -4,13 +4,13 @@ from copy import deepcopy
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import tri
-from . import filters, calcIG
+from . import filters, calcIG, _siggiBase
 from .lsst_utils import BandpassDict
 
 __all__ = ["plotting"]
 
 
-class plotting(object):
+class plotting(_siggiBase):
 
     def __init__(self, sed_list, best_point, set_ratio=None,
                  frozen_filt_dict=None, frozen_filt_eff_wavelen=None,
@@ -46,7 +46,7 @@ class plotting(object):
                 raise ValueError("If including frozen filters, " +
                                  "need list of eff. wavelengths.")
             filter_wavelengths = frozen_filt_eff_wavelen +\
-                f.find_filt_centers(filter_info)
+                self.find_filt_centers(filter_info)
             filter_names_unsort = frozen_filt_dict.keys() +\
                 filter_dict.keys()
             filter_list_unsort = frozen_filt_dict.values() +\
@@ -231,7 +231,7 @@ class plotting(object):
                 filter_info = [filter_set[4*i:4*(i+1)]
                                for i in range(int(len(filter_set)/4))]
 
-            filt_centers.append(f.find_filt_centers(filter_info))
+            filt_centers.append(self.find_filt_centers(filter_info))
 
         filt_centers = np.array(filt_centers)
 
