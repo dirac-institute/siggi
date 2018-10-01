@@ -164,6 +164,11 @@ class BandpassDict(object):
                                       'lens2.dat', 'lens3.dat'],
                           atmosFile='atmos_std.dat'):
 
+        """
+        This is very similar to loadBandpassesFromFiles above except that
+        it loads a bandpassdict instead of from file.
+        """
+
         if bandpassDir is None:
             bandpassDir = os.path.join(os.path.dirname(__file__),
                                        '..', 'data',
@@ -172,30 +177,30 @@ class BandpassDict(object):
         comp_list = [os.path.join(bandpassDir, comp) for comp in components]
         comp_atmos_list = comp_list + [os.path.join(bandpassDir, atmosFile)]
 
+        hardwareBandpass = Bandpass()
+        hardwareBandpass.readThroughputList(comp_list)
         totalBandpass = Bandpass()
-        totalBandpass.readThroughputList(comp_list)
-        totalAtmosBandpass = Bandpass()
-        totalAtmosBandpass.readThroughputList(comp_atmos_list)
+        totalBandpass.readThroughputList(comp_atmos_list)
 
-        filter_list = []
-        atmos_filter_list = []
+        hardware_filter_list = []
+        total_filter_list = []
 
         for key, val in zip(filter_dict.keys(), filter_dict.values()):
             trap_filt = Bandpass()
             trap_filt_a = Bandpass()
-            w, sb = val.multiplyThroughputs(totalBandpass.wavelen,
-                                            totalBandpass.sb)
-            w_a, sb_a = val.multiplyThroughputs(totalAtmosBandpass.wavelen,
-                                                totalAtmosBandpass.sb)
+            w, sb = val.multiplyThroughputs(hardwareBandpass.wavelen,
+                                            hardwareBandpass.sb)
+            w_a, sb_a = val.multiplyThroughputs(totalBandpass.wavelen,
+                                                totalBandpass.sb)
             trap_filt.setBandpass(w, sb)
-            filter_list.append(trap_filt)
+            hardware_filter_list.append(trap_filt)
             trap_filt_a.setBandpass(w_a, sb_a)
-            atmos_filter_list.append(trap_filt_a)
+            total_filter_list.append(trap_filt_a)
 
-        filt_system_dict = cls(filter_list, filter_dict.keys())
-        atmos_filt_system_dict = cls(atmos_filter_list, filter_dict.keys())
+        hardware_filt_system_dict = cls(hardware_filter_list, filter_dict.keys())
+        total_filt_system_dict = cls(total_filter_list, filter_dict.keys())
 
-        return filt_system_dict, atmos_filt_system_dict
+        return hardware_filt_system_dict, total_filt_system_dict
 
 
     @classmethod
