@@ -72,11 +72,11 @@ class calcIG(integrationUtils):
         snr_values = []
         sed_mag_list = []
 
-        sky_mags = self._total_filter_dict.magListForSed(self.sky_spec)
+        sky_mags = self._total_filt_dict.magListForSed(self.sky_spec)
 
         for sed_obj in self._sed_list:
 
-            sed_mags = self._total_filter_dict.magListForSed(sed_obj)
+            sed_mags = self._total_filt_dict.magListForSed(sed_obj)
 
             mag_errors = [calcMagError_sed(sed_obj, filt_tot,
                                            self.sky_spec, filt_hw,
