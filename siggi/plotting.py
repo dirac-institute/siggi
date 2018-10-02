@@ -226,7 +226,8 @@ class plotting(_siggiBase):
                     center = edges[0] + bottom_len/2.
                     top_left = center - top_len/2.
                     top_right = center + top_len/2.
-                    filter_info.append([edges[0], top_left, top_right, edges[1]])
+                    filter_info.append([edges[0], top_left,
+                                        top_right, edges[1]])
             else:
                 filter_info = [filter_set[4*i:4*(i+1)]
                                for i in range(int(len(filter_set)/4))]
@@ -251,7 +252,7 @@ class plotting(_siggiBase):
         zi_lin = interp_lin(xx, yy)
 
         extent = [np.min(xi), np.max(xi), np.min(yi), np.max(yi)]
-        plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower', 
+        plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower',
                    extent=extent, interpolation='bicubic')
 
         if return_centers is True:
