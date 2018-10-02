@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="siggi",
-    version="0.1.0",
+    version="0.1.1",
     author="Bryce Kalmbach",
     author_email="brycek@uw.edu",
     url="https://github.com/jbkalmbach/siggi",
