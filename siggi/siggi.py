@@ -137,7 +137,9 @@ class siggi(_siggiBase):
 
             A set of bandpasses to include in the calculation of colors
             but not to be changed in the optimization. These will stay
-            in place while other filters are optimized.
+            in place while other filters are optimized. This should be
+            the bandpass files before the hardware and atmosphere effects
+            are included in the throughput.
 
         frozen_filt_eff_wavelen, list of floats or None, default = None
 

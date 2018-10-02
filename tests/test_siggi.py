@@ -73,8 +73,8 @@ class testSiggi(unittest.TestCase):
         np.testing.assert_array_equal(t_1.Xi, t_2.Xi)
         np.testing.assert_array_equal(t_1.yi, t_2.yi)
         np.testing.assert_almost_equal(np.max(np.abs(t_1.yi[:10])),
-                                       2.9921531995)
-        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 2.9921531995)
+                                       2.982316583)
+        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 2.982316583)
 
         t_3 = sig_example.optimize_filters(num_filters=num_filters,
                                            filt_min=300., filt_max=1100.,

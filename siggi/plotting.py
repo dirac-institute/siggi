@@ -36,11 +36,11 @@ class plotting(_siggiBase):
 
         trap_dict = f.trap_filters(filter_info)
 
-        filter_dict, atmos_filt_dict = \
+        hardware_filt_dict, total_filt_dict = \
             BandpassDict.addSystemBandpass(trap_dict)
 
         if frozen_filt_dict is None:
-            self.filter_dict = filter_dict
+            self.filter_dict = total_filt_dict
         else:
             if (type(frozen_filt_eff_wavelen) != list):
                 raise ValueError("If including frozen filters, " +
@@ -48,9 +48,9 @@ class plotting(_siggiBase):
             filter_wavelengths = frozen_filt_eff_wavelen +\
                 self.find_filt_centers(filter_info)
             filter_names_unsort = frozen_filt_dict.keys() +\
-                filter_dict.keys()
+                total_filt_dict.keys()
             filter_list_unsort = frozen_filt_dict.values() +\
-                filter_dict.values()
+                total_filt_dict.values()
             sort_idx = np.argsort(filter_wavelengths)
             filter_names = [filter_names_unsort[idx] for idx in sort_idx]
             filter_list = [filter_list_unsort[idx] for idx in sort_idx]
@@ -226,7 +226,8 @@ class plotting(_siggiBase):
                     center = edges[0] + bottom_len/2.
                     top_left = center - top_len/2.
                     top_right = center + top_len/2.
-                    filter_info.append([edges[0], top_left, top_right, edges[1]])
+                    filter_info.append([edges[0], top_left,
+                                        top_right, edges[1]])
             else:
                 filter_info = [filter_set[4*i:4*(i+1)]
                                for i in range(int(len(filter_set)/4))]
@@ -251,7 +252,7 @@ class plotting(_siggiBase):
         zi_lin = interp_lin(xx, yy)
 
         extent = [np.min(xi), np.max(xi), np.min(yi), np.max(yi)]
-        plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower', 
+        plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower',
                    extent=extent, interpolation='bicubic')
 
         if return_centers is True:

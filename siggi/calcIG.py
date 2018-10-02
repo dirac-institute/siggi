@@ -42,7 +42,7 @@ class calcIG(integrationUtils):
             sed_copy.multiplyFluxNorm(f_norm)
             self._sed_list.append(sed_copy)
 
-        self._filter_dict, self._atmos_filt_dict = \
+        self._hardware_filt_dict, self._total_filt_dict = \
             BandpassDict.addSystemBandpass(filter_dict)
 
         self.sky_spec = spectra().get_dark_sky_spectrum()
@@ -72,17 +72,18 @@ class calcIG(integrationUtils):
         snr_values = []
         sed_mag_list = []
 
-        sky_mags = self._filter_dict.magListForSed(self.sky_spec)
+        sky_mags = self._total_filt_dict.magListForSed(self.sky_spec)
 
         for sed_obj in self._sed_list:
 
-            sed_mags = self._filter_dict.magListForSed(sed_obj)
+            sed_mags = self._total_filt_dict.magListForSed(sed_obj)
 
-            mag_errors = [calcMagError_sed(sed_obj, filt_a,
-                                           self.sky_spec, filt,
+            mag_errors = [calcMagError_sed(sed_obj, filt_tot,
+                                           self.sky_spec, filt_hw,
                                            self.phot_params, self.fwhm_eff) for
-                          filt, filt_a in zip(self._filter_dict.values(),
-                                              self._atmos_filt_dict.values())]
+                          filt_tot, filt_hw in zip(
+                                self._total_filt_dict.values(),
+                                self._hardware_filt_dict.values())]
 
             if np.isnan(sed_mags[0]):
                 print(sed_mags)
@@ -93,12 +94,12 @@ class calcIG(integrationUtils):
                                  in range(len(mag_errors) - 1)])
 
             if return_all is True:
-                snr_value = [calcSNR_sed(sed_obj, filt_a,
-                                         self.sky_spec, filt,
+                snr_value = [calcSNR_sed(sed_obj, filt_tot,
+                                         self.sky_spec, filt_hw,
                                          self.phot_params, self.fwhm_eff) for
-                             filt, filt_a in zip(
-                                self._filter_dict.values(),
-                                self._atmos_filt_dict.values())]
+                             filt_tot, filt_hw in zip(
+                                self._total_filt_dict.values(),
+                                self._hardware_filt_dict.values())]
                 snr_values.append(snr_value)
                 sed_mag_list.append(sed_mags)
 

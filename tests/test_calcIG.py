@@ -31,7 +31,7 @@ class testCalcIG(unittest.TestCase):
 
         trap_dict = self.f.trap_filters([[740., 770., 830., 860.],
                                          [740., 770., 830., 860.]])
-        filt_dict, atmos_filt_dict = \
+        hardware_filt_dict, total_filt_dict = \
             BandpassDict.addSystemBandpass(trap_dict)
 
         sed_list = [self.red_spec, self.red_spec]
@@ -47,8 +47,9 @@ class testCalcIG(unittest.TestCase):
         self.sky_spec.multiplyFluxNorm(sky_fn)
 
         test_error = calcMagError_sed(test_c._sed_list[0],
-                                      atmos_filt_dict['filter_0'],
-                                      self.sky_spec, filt_dict['filter_0'],
+                                      total_filt_dict['filter_0'],
+                                      self.sky_spec,
+                                      hardware_filt_dict['filter_0'],
                                       self.phot_params, 1.0)
 
         np.testing.assert_almost_equal(errors, [[test_error*np.sqrt(2)],
@@ -57,21 +58,22 @@ class testCalcIG(unittest.TestCase):
         trap_dict_2 = self.f.trap_filters([[420., 435., 465., 480.],
                                            [770., 785., 815., 830.],
                                            [970., 985., 1015., 1030.]])
-        filt_dict_2, atmos_filt_dict_2 = \
+        hardware_filt_dict_2, total_filt_dict_2 = \
             BandpassDict.addSystemBandpass(trap_dict_2)
 
-        sky_fn2 = self.sky_spec.calcFluxNorm(19.0, filt_dict_2['filter_0'])
+        sky_fn2 = self.sky_spec.calcFluxNorm(19.0,
+                                             total_filt_dict_2['filter_0'])
         self.sky_spec.multiplyFluxNorm(sky_fn2)
-        sky_mags = filt_dict_2.magListForSed(self.sky_spec)
+        sky_mags = total_filt_dict_2.magListForSed(self.sky_spec)
 
         sed_1 = Sed()
         sed_1.setSED(wavelen=np.linspace(200., 1500., 1301),
                      flambda=np.ones(1301))
         imsim_f_norm = sed_1.calcFluxNorm(19.0, self.imsimBand)
         sed_1.multiplyFluxNorm(imsim_f_norm)
-        f_norm_1_0 = sed_1.calcFluxNorm(15.0, filt_dict_2['filter_0'])
-        f_norm_1_1 = sed_1.calcFluxNorm(14.0, filt_dict_2['filter_1'])
-        f_norm_1_2 = sed_1.calcFluxNorm(13.0, filt_dict_2['filter_2'])
+        f_norm_1_0 = sed_1.calcFluxNorm(15.0, total_filt_dict_2['filter_0'])
+        f_norm_1_1 = sed_1.calcFluxNorm(14.0, total_filt_dict_2['filter_1'])
+        f_norm_1_2 = sed_1.calcFluxNorm(13.0, total_filt_dict_2['filter_2'])
         flambda_1 = sed_1.flambda
         flambda_1[:500] *= f_norm_1_0
         flambda_1[500:700] *= f_norm_1_1
@@ -79,7 +81,7 @@ class testCalcIG(unittest.TestCase):
         sed_1.flambda = flambda_1
 
         test_c2 = calcIG(trap_dict_2, [sed_1], [1.0], sed_mags=15.0,
-                         ref_filter=filt_dict_2['filter_0'])
+                         ref_filter=total_filt_dict_2['filter_0'])
 
         colors2, errors2, snr2, mags2, sky_m2 = test_c2.calc_colors(
                                                         return_all=True)
