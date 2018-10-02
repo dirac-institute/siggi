@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
+from scipy import stats
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import tri
@@ -257,3 +258,70 @@ class plotting(_siggiBase):
 
         if return_centers is True:
             return xi, yi
+
+    def plot_color_distributions(self, filter_names, redshift_list,
+                                 cmap=plt.get_cmap('plasma'), fig=None,
+                                 add_cbar=False):
+
+        """
+        Plot the color-color tracks for each SED template as a function
+        of redshift using pairs of filters.
+        """
+
+        """
+        Plot the color-color tracks for each SED template as a function
+        of redshift using pairs of filters.
+        """
+
+        if fig is None:
+            fig = plt.figure(figsize=(12, 6))
+
+        shift_seds = []
+        shift_values = []
+
+        for sed_obj in self.sed_list:
+            for idx, z_val in list(enumerate(redshift_list)):
+                sed_copy = deepcopy(sed_obj)
+                sed_copy.redshiftSED(z_val)
+                shift_seds.append(sed_copy)
+                shift_values.append(idx)
+
+        color_x_dict = BandpassDict([self.filter_dict[filt] for filt
+                                     in filter_names], filter_names)
+
+        calc_ig = calcIG(color_x_dict, shift_seds,
+                         np.ones(len(shift_seds)),
+                         sky_mag=self.sky_mag,
+                         sed_mags=self.sed_mags)
+        col_x, err_x = calc_ig.calc_colors()
+
+        num_z = len(redshift_list)
+
+        cmap = plt.get_cmap('plasma')
+
+        c_extent = np.linspace(0, 1, len(redshift_list))
+
+        i = 0
+        for c, err, idx in zip(col_x, err_x, shift_values):
+            pts = np.linspace(c-5*err, c+5*err, 100)
+            vals = stats.norm.pdf(pts, loc=c, scale=err)
+            plt.fill_between(pts, 0, vals, alpha=0.3,
+                             color=cmap(c_extent[idx]))
+            i += 1
+
+        plt.ylabel('Probability Density')
+        plt.xlabel('%s - %s Color' % (filter_names[0],
+                                      filter_names[1]))
+
+        if add_cbar is True:
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(
+                                        vmin=np.min(redshift_list),
+                                        vmax=np.max(redshift_list)))
+            sm._A = []
+
+            new_ax = fig.add_axes([0.07, 0.00, 0.91, 0.03])
+
+            cbar = plt.colorbar(sm, cax=new_ax, orientation='horizontal')
+            cbar.set_label('Galaxy Redshift')
+
+        return fig
