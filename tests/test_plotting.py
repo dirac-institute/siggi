@@ -64,6 +64,21 @@ class testPlotting(unittest.TestCase):
 
         return
 
+    def test_plot_color_distributions(self):
+
+        sig_plot = plotting(self.spec_list, self.best_point,
+                            frozen_filt_dict=None, set_ratio=0.5,
+                            sed_mags=22.0)
+
+        sig_plot.plot_color_distributions(['filter_0', 'filter_1'],
+                                          np.linspace(0.00, 0.0))
+
+        sig_plot.plot_color_distributions(['filter_0', 'filter_1'],
+                                          np.linspace(0.00, 0.0),
+                                          add_cbar=True)
+
+        return
+
     @classmethod
     def tearDownClass(cls):
         return
