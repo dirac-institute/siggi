@@ -115,12 +115,12 @@ class testSiggi(unittest.TestCase):
         # Test that proper filters get through
         test_input_1 = test_sb.validate_filter_input([300., 301., 302., 303.,
                                                       400., 401., 402., 403.],
-                                                     300., 600., 2)
+                                                     300., 403., 2)
         self.assertTrue(test_input_1)
 
         test_input_1_ratio = test_sb.validate_filter_input([300., 303.,
                                                             400., 403.],
-                                                           300., 600., 2, 0.5)
+                                                           300., 403., 2, 0.5)
         self.assertTrue(test_input_1_ratio)
 
         # Test that filter cannot be less than min allowed wavelength
@@ -176,6 +176,16 @@ class testSiggi(unittest.TestCase):
                                                            300., 302., 1, 0.5)
 
         self.assertFalse(test_input_6_ratio)
+
+        test_input_7 = test_sb.validate_filter_input([300., 301., 302., 301.95],
+                                                     300., 303., 1)
+
+        self.assertFalse(test_input_7)
+
+        test_input_7_ratio = test_sb.validate_filter_input([301., 300.95],
+                                                           300., 302., 1, 0.5)
+
+        self.assertFalse(test_input_7_ratio)
 
 if __name__ == '__main__':
     unittest.main()
