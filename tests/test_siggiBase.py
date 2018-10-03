@@ -177,7 +177,8 @@ class testSiggi(unittest.TestCase):
 
         self.assertFalse(test_input_6_ratio)
 
-        test_input_7 = test_sb.validate_filter_input([300., 301., 302., 301.95],
+        test_input_7 = test_sb.validate_filter_input([300., 301.,
+                                                      302., 301.95],
                                                      300., 303., 1)
 
         self.assertFalse(test_input_7)
