@@ -123,7 +123,7 @@ class _siggiBase(object):
         for filt_list in filt_input:
             filt_diffs = [filt_list[idx] - filt_list[idx-1]
                           for idx in range(1, len(filt_list))]
-            filt_diffs = np.array(filt_diffs, dtype=np.int)
+            filt_diffs = np.array(filt_diffs)
             if np.min(filt_diffs) < 0:
                 return False
             elif np.max(filt_diffs) <= 0:
@@ -139,7 +139,7 @@ class _siggiBase(object):
         print(filt_centers, filt_input)
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1]
                       for idx in range(1, len(filt_centers))]
-        filt_diffs = np.array(filt_diffs, dtype=np.int)
+        filt_diffs = np.array(filt_diffs)
 
         if np.min(filt_diffs) < 0:
             return False
