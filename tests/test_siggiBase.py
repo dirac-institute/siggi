@@ -188,5 +188,21 @@ class testSiggi(unittest.TestCase):
 
         self.assertFalse(test_input_7_ratio)
 
+        wave_step = self.f.wavelen_step
+
+        test_input_8 = test_sb.validate_filter_input([300., 301.,
+                                                      301.9,
+                                                      301.9 + wave_step/2.],
+                                                     300., 303., 1)
+
+        self.assertFalse(test_input_8)
+
+        test_input_8_ratio = test_sb.validate_filter_input([301.,
+                                                            301. + wave_step /
+                                                            2.],
+                                                           300., 302., 1, 0.5)
+
+        self.assertFalse(test_input_8_ratio)
+
 if __name__ == '__main__':
     unittest.main()
