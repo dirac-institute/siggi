@@ -91,7 +91,8 @@ class _siggiBase(object):
         return dim_list, x0
 
     def validate_filter_input(self, filt_edges, filt_min, filt_max,
-                              num_filters, ratio=None):
+                              num_filters, ratio=None,
+                              wavelen_step=0.1):
 
         # Make sure input is correct shape
         if ratio is not None:
@@ -124,7 +125,7 @@ class _siggiBase(object):
             filt_diffs = [filt_list[idx] - filt_list[idx-1]
                           for idx in range(1, len(filt_list))]
             filt_diffs = np.array(filt_diffs)
-            if np.min(filt_diffs) < 0:
+            if np.min(filt_diffs) < wavelen_step:
                 return False
             elif np.max(filt_diffs) <= 0:
                 return False

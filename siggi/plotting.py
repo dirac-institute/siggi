@@ -81,10 +81,11 @@ class plotting(_siggiBase):
 
         cmap = plt.get_cmap('rainbow')
 
-        for filt, color in zip(self.filter_dict.values(), c_list):
+        for name, filt, color in zip(self.filter_dict.keys(),
+                                     self.filter_dict.values(), c_list):
             plt.fill(filt.wavelen, filt.sb,
                      c=cmap(color),
-                     zorder=10, alpha=0.6)
+                     zorder=10, alpha=0.6, label=name)
         plt.xlim(filt.wavelen[0] - 50., filt.wavelen[-1] + 50)
         plt.xlabel('Wavelength (nm)')
         plt.ylabel('Scaled Flux')
