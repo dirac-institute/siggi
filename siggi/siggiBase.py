@@ -125,9 +125,11 @@ class _siggiBase(object):
             filt_diffs = [filt_list[idx] - filt_list[idx-1]
                           for idx in range(1, len(filt_list))]
             filt_diffs = np.array(filt_diffs)
-            if np.min(filt_diffs) < wavelen_step:
+            if np.min(filt_diffs) < 0.:
                 return False
             elif np.max(filt_diffs) <= 0:
+                return False
+            elif filt_list[-1] - filt_list[0] < wavelen_step:
                 return False
 
         # At this point if there is only one filter we are good
