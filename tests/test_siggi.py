@@ -76,6 +76,8 @@ class testSiggi(unittest.TestCase):
                                        2.982316583)
         self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 2.982316583)
 
+        # Test pickling of optimization can replicate results
+
         t_3 = sig_example.optimize_filters(num_filters=num_filters,
                                            filt_min=300., filt_max=1100.,
                                            sed_mags=22.0,
@@ -112,6 +114,29 @@ class testSiggi(unittest.TestCase):
 
         np.testing.assert_array_equal(t_1.Xi, t_4.Xi)
         np.testing.assert_array_equal(t_1.yi, t_4.yi)
+
+        # Test random point assignment after timeout
+
+        t_5 = sig_example.optimize_filters(num_filters=num_filters,
+                                           filt_min=300., filt_max=1100.,
+                                           sed_mags=22.0,
+                                           set_ratio=set_ratio,
+                                           system_wavelen_max=1200.,
+                                           n_opt_points=14,
+                                           optimizer_verbosity=10,
+                                           procs=4,
+                                           acq_func_kwargs_dict={'kappa': 3},
+                                           frozen_filt_dict=self.frozen_dict,
+                                           frozen_filt_eff_wavelen=[365, 477],
+                                           starting_points=None,
+                                           rand_state=23,
+                                           max_search_factor=1)
+
+        self.assertGreater(len(t_5.Xi), 14)
+        self.assertGreaterEqual(18, len(t_5.Xi))
+        np.testing.assert_array_equal(t_1.Xi[:10], t_5.Xi[:10])
+        np.testing.assert_array_equal(t_1.yi[:10], t_5.yi[:10])
+        np.testing.assert_equal(len(t_5.yi), len(t_5.Xi))
 
     @classmethod
     def tearDownClass(cls):

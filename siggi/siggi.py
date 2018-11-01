@@ -300,20 +300,25 @@ class siggi(_siggiBase):
                             else:
                                 opt.tell(point, 0)
                             pts_tried += 1
+
                         if ((pts_tried >= max_search_factor*procs) and
                            (pts_needed > 0)):
-
-                            for add_point in range(pts_needed):
-                                if self.ratio is not None:
-                                    filt_factor = 2
-                                else:
-                                    filt_factor = 4
-                                next_pt = np.random.uniform(filt_min,
-                                                            filt_max,
-                                                            size=filt_factor *
-                                                            self.num_filters)
-                                x.append(list(np.sort(next_pt)))
-                                random_points_used += 1
+                            while pts_needed > 0:
+                                best_xi = opt.Xi[np.argmin(opt.yi)]
+                                next_pt = rand_state.normal(0.,
+                                                            0.02*(filt_max -
+                                                                  filt_min),
+                                                            size=len(best_xi))
+                                print(best_xi, next_pt)
+                                next_pt += best_xi
+                                filt_input = self.validate_filter_input(
+                                    next_pt, filt_min, filt_max,
+                                    self.num_filters, self.ratio,
+                                    self.f.wavelen_step)
+                                if filt_input is True:
+                                    x.append(list(np.sort(next_pt)))
+                                    random_points_used += 1
+                                    pts_needed -= 1
                         print(pts_tried)
                     print("Random Points Used: %i" % random_points_used)
 

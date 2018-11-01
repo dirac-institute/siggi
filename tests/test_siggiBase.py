@@ -194,14 +194,14 @@ class testSiggi(unittest.TestCase):
 
         test_input_8 = test_sb.validate_filter_input([300., 300.,
                                                       300.,
-                                                      300. + wave_step/2.],
+                                                      300. + 2*wave_step],
                                                      300., 303., 1)
 
         self.assertFalse(test_input_8)
 
         test_input_8_ratio = test_sb.validate_filter_input([301.,
                                                             301. +
-                                                            wave_step/2.],
+                                                            2*wave_step],
                                                            300., 302., 1, 0.5)
 
         self.assertFalse(test_input_8_ratio)
@@ -209,7 +209,7 @@ class testSiggi(unittest.TestCase):
         # Test that wavelength step check doesn't affect triangular filter
 
         test_input_9 = test_sb.validate_filter_input([300., 300.,
-                                                      300. + wave_step/2.,
+                                                      300. + wave_step*2,
                                                       301.9],
                                                      300., 303., 1)
 
