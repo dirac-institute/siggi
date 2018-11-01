@@ -90,6 +90,7 @@ class siggi(_siggiBase):
                          width_min=30., width_max=120.,
                          starting_points=None,
                          system_wavelen_min=300., system_wavelen_max=1150.,
+                         system_wavelen_step=0.1,
                          procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
                          acq_opt_kwargs_dict=None, checkpointing=True,
                          optimizer_verbosity=5,
@@ -178,13 +179,17 @@ class siggi(_siggiBase):
             except that the lists are four numbers where the order is bottom
             left, top left, top right, bottom right corners of the filters.
 
-        system_wavelength_min, float, default = 300.
+        system_wavelen_min, float, default = 300.
 
             This is the minimum edge of the Bandpass Objects in nm.
 
-        system_wavelength_max, float default = 1150.
+        system_wavelen_max, float default = 1150.
 
             This is the maximum edge of the Bandpass Objects in nm.
+
+        system_wavelen_step, float default = 0.1
+
+            This is the wavelength step of the Bandpass Objects in nm.
 
         procs, int, default = 1
 
@@ -241,7 +246,8 @@ class siggi(_siggiBase):
         self.sky_mag = sky_mag
         self.sed_mags = sed_mags
         self.f = filters(system_wavelen_min,
-                         system_wavelen_max)
+                         system_wavelen_max,
+                         system_wavelen_step)
         self.frozen_filt_dict = frozen_filt_dict
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
         self.verbosity = optimizer_verbosity
@@ -286,7 +292,8 @@ class siggi(_siggiBase):
                                                          filt_min,
                                                          filt_max,
                                                          self.num_filters,
-                                                         ratio=self.ratio)
+                                                         self.ratio,
+                                                         self.f.wavelen_step)
                             if filt_input is True:
                                 x.append(point)
                                 pts_needed -= 1
