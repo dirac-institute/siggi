@@ -55,21 +55,19 @@ class siggi(_siggiBase):
 
         The filter you wish to use to set the sky brightness
         and brightness of the SEDs when optimizing.
+
+    calib_mag, float, default = 22.0
+
+        The magnitude in the calib_filter bandpass to which rest
+        frame SEDs will be normalized.
     """
 
     def __init__(self, spec_list, spec_weights, z_prior,
                  z_min=0.05, z_max=2.5, z_steps=50,
-                 calib_filter=None):
+                 calib_filter=None, calib_mag=22.):
 
         self.shift_seds = []
         self.z_probs = []
-
-        for spec, weight in zip(spec_list, spec_weights):
-            for z_val in np.linspace(z_min, z_max, z_steps):
-                spec_copy = deepcopy(spec)
-                spec_copy.redshiftSED(z_val)
-                self.shift_seds.append(spec_copy)
-                self.z_probs.append(z_prior(z_val)*weight)
 
         bp_dict_folder = os.path.join(os.path.dirname(__file__),
                                       'data',
@@ -81,6 +79,15 @@ class siggi(_siggiBase):
             self.calib_filter = bp_dict['r']
         else:
             self.calib_filter = calib_filter
+
+        for spec, weight in zip(spec_list, spec_weights):
+            for z_val in np.linspace(z_min, z_max, z_steps):
+                spec_copy = deepcopy(spec)
+                f_norm = spec_copy.calcFluxNorm(calib_mag, self.calib_filter)
+                spec_copy.multiplyFluxNorm(f_norm)
+                spec_copy.redshiftSED(z_val, dimming=True)
+                self.shift_seds.append(spec_copy)
+                self.z_probs.append(z_prior(z_val)*weight)
 
     def optimize_filters(self, filt_min=300., filt_max=1100.,
                          sky_mag=19.0, sed_mags=22.0, num_filters=6,
