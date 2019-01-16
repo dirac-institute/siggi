@@ -308,7 +308,8 @@ class plotting(_siggiBase):
             vals = stats.norm.pdf(pts, loc=c, scale=err)
             low_val = np.array([0]*len(vals))
             print(np.ndim(low_val), np.ndim(pts), np.ndim(vals))
-            plt.fill_between(pts, low_val,
+            print(pts, vals)
+            plt.fill_between(pts, 0,
                              vals, alpha=0.3,
                              color=cmap(c_extent[idx]))
             i += 1
