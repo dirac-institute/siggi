@@ -304,6 +304,7 @@ class plotting(_siggiBase):
 
         i = 0
         for c, err, idx in zip(col_x, err_x, shift_values):
+            print(c, err)
             pts = np.linspace(c-5*err, c+5*err, 100)
             vals = stats.norm.pdf(pts, loc=c, scale=err)
             low_val = np.array([0]*len(vals))
