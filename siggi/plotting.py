@@ -306,7 +306,10 @@ class plotting(_siggiBase):
         for c, err, idx in zip(col_x, err_x, shift_values):
             pts = np.linspace(c-5*err, c+5*err, 100)
             vals = stats.norm.pdf(pts, loc=c, scale=err)
-            plt.fill_between(pts, 0, vals, alpha=0.3,
+            low_val = np.array([0]*len(vals))
+            print(np.ndim(low_val), np.ndim(pts), np.ndim(vals))
+            plt.fill_between(pts, low_val,
+                             vals, alpha=0.3,
                              color=cmap(c_extent[idx]))
             i += 1
 

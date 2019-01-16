@@ -71,10 +71,10 @@ class testPlotting(unittest.TestCase):
                             sed_mags=22.0)
 
         sig_plot.plot_color_distributions(['filter_0', 'filter_1'],
-                                          np.linspace(0.00, 0.1))
+                                          np.linspace(0.00, 0.0))
 
         sig_plot.plot_color_distributions(['filter_0', 'filter_1'],
-                                          np.linspace(0.00, 0.1),
+                                          np.linspace(0.00, 0.0),
                                           add_cbar=True)
 
         return
