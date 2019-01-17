@@ -215,7 +215,7 @@ class plotting(_siggiBase):
         plt.colorbar(sm, label='Redshift')
 
         if include_err is True:
-            plt.errorbar(col_x, col_y, xerr=err_x, yerr=err_y,
+            plt.errorbar(col_x, col_y, xerr=err_x**.5, yerr=err_y**.5,
                          ms=2, alpha=0.5, ls=' ', zorder=0)
 
         return fig
