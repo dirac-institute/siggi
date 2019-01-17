@@ -20,9 +20,9 @@ class calcIG(integrationUtils):
     and calculate the information gain.
     """
 
-    def __init__(self, filter_dict, sed_list, sed_probs, sed_mags=22.0,
-                 sky_mag=19.0, ref_filter=None, phot_params=None,
-                 fwhm_eff=1.0):
+    def __init__(self, filter_dict, sed_list, sed_probs,
+                 sky_mag=19.0, ref_filter = None, phot_params=None,
+                 fwhm_eff=1.0, sed_normed = True, sed_mags = 22.0):
 
         self._sed_list = []
 
@@ -38,8 +38,10 @@ class calcIG(integrationUtils):
             sed_copy.resampleSED(wavelen_match=filter_dict.values()[0].wavelen)
             sed_copy.flambda[np.where(np.isnan(sed_copy.flambda))] = 0.
 
-            f_norm = sed_copy.calcFluxNorm(sed_mags, ref_filter)
-            sed_copy.multiplyFluxNorm(f_norm)
+            if sed_normed is False:
+                f_norm = sed_copy.calcFluxNorm(sed_mags, ref_filter)
+                sed_copy.multiplyFluxNorm(f_norm)
+
             self._sed_list.append(sed_copy)
 
         self._hardware_filt_dict, self._total_filt_dict = \
