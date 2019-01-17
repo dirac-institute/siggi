@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
@@ -13,7 +14,8 @@ __all__ = ["plotting"]
 
 class plotting(_siggiBase):
 
-    def __init__(self, sed_list, best_point, set_ratio=None,
+    def __init__(self, sed_list, best_point, 
+                 calib_filter=None, set_ratio=None,
                  frozen_filt_dict=None, frozen_filt_eff_wavelen=None,
                  sky_mag=19.0, sed_mags=22.0):
 
@@ -63,6 +65,17 @@ class plotting(_siggiBase):
         self.sky_mag = sky_mag
         self.sed_mags = sed_mags
         self.set_ratio = set_ratio
+
+        bp_dict_folder = os.path.join(os.path.dirname(__file__),
+                                      'data',
+                                      'lsst_baseline_throughputs')
+        bp_dict = BandpassDict.loadTotalBandpassesFromFiles(
+            bandpassDir=bp_dict_folder)
+
+        if calib_filter is None:
+            self.calib_filter = bp_dict['r']
+        else:
+            self.calib_filter = calib_filter
 
     def plot_filters(self, fig=None):
 
@@ -156,7 +169,10 @@ class plotting(_siggiBase):
         for sed_obj in self.sed_list:
             for z_val in redshift_list:
                 sed_copy = deepcopy(sed_obj)
-                sed_copy.redshiftSED(z_val)
+                f_norm = sed_copy.calcFluxNorm(self.sed_mags, 
+                                               self.calib_filter)
+                sed_copy.multiplyFluxNorm(f_norm)
+                sed_copy.redshiftSED(z_val, dimming=True)
                 shift_seds.append(sed_copy)
 
         color_x_dict = BandpassDict([self.filter_dict[filt] for filt

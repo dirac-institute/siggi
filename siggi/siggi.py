@@ -126,11 +126,6 @@ class siggi(_siggiBase):
             The default magnitude of the sky background in the calib
             filter specified when instantiating.
 
-        sed_mags, float, default = 22.0
-
-            The default magnitude of the SEDs in the calib filter
-            specified when instantiating.
-
         num_filters, int, default = 6
 
             The number of filters to optimize
@@ -251,7 +246,7 @@ class siggi(_siggiBase):
         self.num_filters = num_filters
         self.ratio = set_ratio
         self.sky_mag = sky_mag
-        self.sed_mags = sed_mags
+
         self.f = filters(system_wavelen_min,
                          system_wavelen_max,
                          system_wavelen_step)
@@ -400,7 +395,7 @@ class siggi(_siggiBase):
             return 0
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
-                   sky_mag=self.sky_mag, sed_mags=self.sed_mags,
+                   sky_mag=self.sky_mag,
                    ref_filter=self.calib_filter)
         step_result = c.calc_IG(rand_state=np.random.RandomState(
                         np.int(np.sum(filt_params))))
