@@ -2,17 +2,30 @@ import unittest
 import numpy as np
 from scipy.spatial.distance import cdist
 from scipy import stats
-from scipy.special import gamma
-from siggi.mathUtils import integrationUtils
+from siggi.mathUtils import mathUtils
 
 
 class testMathUtils(unittest.TestCase):
+
+    def test_calc_h(self):
+
+        m_utils = mathUtils()
+
+        sed_probs = [0.5, 0.5]
+        self.assertEqual(-np.log2(0.5), m_utils.calc_h(sed_probs))
+
+        sed_probs2 = [0.7, 0.3]
+        self.assertEqual(-0.3*np.log2(.3) - 0.7*np.log2(0.7),
+                         m_utils.calc_h(sed_probs2))
+
+        sed_probs3 = [0.25, 0.25, 0.25, 0.25]
+        self.assertEqual(-np.log2(0.25), m_utils.calc_h(sed_probs3))
 
     def test_integral_scaling(self):
 
         y_distances = np.array([0.5, 1.0, 1.5])
 
-        i_utils = integrationUtils()
+        i_utils = mathUtils()
 
         # Since we use absolute differences from zero and the unit
         # 1-ball is on the interval [-1, 1] the truth in 1-d is double
@@ -56,7 +69,7 @@ class testMathUtils(unittest.TestCase):
         y_dist = y_dist[y_sort]
         y_samples = y_samples[y_sort]
 
-        i_utils = integrationUtils()
+        i_utils = mathUtils()
         norm_factor = i_utils.calc_integral_scaling(y_dist, 1, [1.0])
 
         y_values = gauss.pdf(y_samples, mean=1.0, cov=[1.0])
@@ -80,7 +93,7 @@ class testMathUtils(unittest.TestCase):
         y_dist = y_dist[y_sort]
         y_samples = y_samples[y_sort]
 
-        i_utils = integrationUtils()
+        i_utils = mathUtils()
         norm_factor = i_utils.calc_integral_scaling(y_dist, 2,
                                                     np.ones(2))
         y_values = gauss2d.pdf(y_samples, mean=np.ones(2),
@@ -108,7 +121,7 @@ class testMathUtils(unittest.TestCase):
         y_dist = y_dist[y_sort]
         y_samples = y_samples[y_sort]
 
-        i_utils = integrationUtils()
+        i_utils = mathUtils()
         norm_factor = i_utils.calc_integral_scaling(y_dist, 2,
                                                     np.array([.3, .5]))
         y_values = gauss2d.pdf(y_samples, mean=np.ones(2),
@@ -116,6 +129,7 @@ class testMathUtils(unittest.TestCase):
         integral_sum = np.nansum(y_values*norm_factor)
 
         np.testing.assert_almost_equal(integral_sum, 1.0, decimal=3)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,14 +1,27 @@
 import numpy as np
 from scipy.special import gamma
 
-__all__ = ["integrationUtils"]
+__all__ = ["mathUtils"]
 
 
-class integrationUtils(object):
+class mathUtils(object):
 
     def __init__(self):
 
         return
+
+    def calc_h(self, sed_probs):
+
+        """
+        Calculates the total entropy from a list of probabilities.
+        """
+
+        h_sum = 0
+
+        for py_i in sed_probs:
+            h_sum += -(py_i)*np.log2(py_i)
+
+        return h_sum
 
     def calc_integral_scaling(self, distances, n_dim, dim_scale):
 

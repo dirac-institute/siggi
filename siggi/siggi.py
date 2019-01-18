@@ -1,13 +1,11 @@
 import os
 import numpy as np
-import multiprocessing as mp
 import pickle
-from skopt import gp_minimize, Optimizer
+from skopt import Optimizer
 from skopt.space import Real
 from sklearn.externals.joblib import Parallel, delayed
 from copy import deepcopy
-from functools import reduce
-from . import filters, spectra, calcIG, _siggiBase
+from . import filters, calcIG, _siggiBase
 from .lsst_utils import BandpassDict
 
 __all__ = ["siggi"]
@@ -90,7 +88,7 @@ class siggi(_siggiBase):
                 self.z_probs.append(z_prior(z_val)*weight)
 
     def optimize_filters(self, filt_min=300., filt_max=1100.,
-                         sky_mag=19.0, sed_mags=22.0, num_filters=6,
+                         sky_mag=21.2, num_filters=6,
                          filter_type='trap', frozen_filt_dict=None,
                          frozen_filt_eff_wavelen=None,
                          set_ratio=None,
@@ -121,7 +119,7 @@ class siggi(_siggiBase):
 
             The maximum wavelength in nm of the bandpasses.
 
-        sky_mag, float, default = 19.0
+        sky_mag, float, default = 21.2
 
             The default magnitude of the sky background in the calib
             filter specified when instantiating.

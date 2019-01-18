@@ -1,11 +1,9 @@
 from __future__ import division
 
-import os
 import numpy as np
 from scipy.spatial.distance import cdist
 from scipy import stats
-from scipy.special import gamma
-from .mathUtils import integrationUtils
+from .mathUtils import mathUtils
 from . import Sed, Bandpass, BandpassDict, spectra
 from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
@@ -13,7 +11,7 @@ from .lsst_utils import PhotometricParameters
 __all__ = ["calcIG"]
 
 
-class calcIG(integrationUtils):
+class calcIG(mathUtils):
 
     """
     This class will take a set of SEDs and a set of filters
@@ -21,8 +19,8 @@ class calcIG(integrationUtils):
     """
 
     def __init__(self, filter_dict, sed_list, sed_probs,
-                 sky_mag=19.0, ref_filter = None, phot_params=None,
-                 fwhm_eff=1.0, sed_normed = True, sed_mags = 22.0):
+                 sky_mag=21.2, ref_filter=None, phot_params=None,
+                 fwhm_eff=1.0, sed_normed=True, sed_mags=22.0):
 
         self._sed_list = []
 
@@ -111,22 +109,6 @@ class calcIG(integrationUtils):
 
         return np.array(sed_colors), np.array(color_errors)
 
-    def calc_h(self):
-
-        """
-        Calculates the total entropy of the set of SEDs and redshifts.
-        """
-
-        sed_probs = self.sed_probs
-
-        h_sum = 0
-        total_y = len(sed_probs)
-
-        for py_i in sed_probs:
-            h_sum += -(py_i)*np.log2(py_i)
-
-        return h_sum
-
     def calc_hyx(self, colors, errors, rand_state=None):
 
         """
@@ -207,7 +189,7 @@ class calcIG(integrationUtils):
         """
 
         colors, errors = self.calc_colors()
-        hy_sum = self.calc_h()
+        hy_sum = self.calc_h(self.sed_probs)
         hyx_sum = self.calc_hyx(colors, errors, rand_state)
 
         info_gain = hy_sum - hyx_sum

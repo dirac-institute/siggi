@@ -1,8 +1,8 @@
 import os
 import unittest
 import pickle
-from siggi import siggi, filters, spectra, calcIG
-from siggi.lsst_utils import Bandpass, BandpassDict
+from siggi import siggi, filters, spectra
+from siggi.lsst_utils import BandpassDict
 import numpy as np
 
 
@@ -44,7 +44,6 @@ class testSiggi(unittest.TestCase):
         set_ratio = 1.0
         t_1 = sig_example.optimize_filters(num_filters=num_filters,
                                            filt_min=300., filt_max=1100.,
-                                           sed_mags=22.0,
                                            set_ratio=set_ratio,
                                            system_wavelen_max=1200.,
                                            n_opt_points=14,
@@ -58,7 +57,6 @@ class testSiggi(unittest.TestCase):
 
         t_2 = sig_example.optimize_filters(num_filters=num_filters,
                                            filt_min=300., filt_max=1100.,
-                                           sed_mags=22.0,
                                            set_ratio=set_ratio,
                                            system_wavelen_max=1200.,
                                            n_opt_points=14,
@@ -73,14 +71,13 @@ class testSiggi(unittest.TestCase):
         np.testing.assert_array_equal(t_1.Xi, t_2.Xi)
         np.testing.assert_array_equal(t_1.yi, t_2.yi)
         np.testing.assert_almost_equal(np.max(np.abs(t_1.yi[:10])),
-                                       1.98773527)
-        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 1.98773527)
+                                       3.1032161775)
+        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 3.1032161775)
 
         # Test pickling of optimization can replicate results
 
         t_3 = sig_example.optimize_filters(num_filters=num_filters,
                                            filt_min=300., filt_max=1100.,
-                                           sed_mags=22.0,
                                            set_ratio=set_ratio,
                                            system_wavelen_max=1200.,
                                            n_opt_points=10,
@@ -99,7 +96,6 @@ class testSiggi(unittest.TestCase):
 
         t_4 = sig_example.optimize_filters(num_filters=num_filters,
                                            filt_min=300., filt_max=1100.,
-                                           sed_mags=22.0,
                                            set_ratio=set_ratio,
                                            system_wavelen_max=1200.,
                                            n_opt_points=4,
@@ -119,7 +115,6 @@ class testSiggi(unittest.TestCase):
 
         t_5 = sig_example.optimize_filters(num_filters=num_filters,
                                            filt_min=300., filt_max=1100.,
-                                           sed_mags=22.0,
                                            set_ratio=set_ratio,
                                            system_wavelen_max=1200.,
                                            n_opt_points=14,

@@ -43,7 +43,7 @@ class testCalcIG(unittest.TestCase):
 
         np.testing.assert_equal(colors, np.zeros(np.shape(colors)))
 
-        sky_fn = self.sky_spec.calcFluxNorm(19.0, self.imsimBand)
+        sky_fn = self.sky_spec.calcFluxNorm(21.2, self.imsimBand)
         self.sky_spec.multiplyFluxNorm(sky_fn)
 
         test_error = calcMagError_sed(test_c._sed_list[0],
@@ -61,7 +61,7 @@ class testCalcIG(unittest.TestCase):
         hardware_filt_dict_2, total_filt_dict_2 = \
             BandpassDict.addSystemBandpass(trap_dict_2)
 
-        sky_fn2 = self.sky_spec.calcFluxNorm(19.0,
+        sky_fn2 = self.sky_spec.calcFluxNorm(21.2,
                                              total_filt_dict_2['filter_0'])
         self.sky_spec.multiplyFluxNorm(sky_fn2)
         sky_mags = total_filt_dict_2.magListForSed(self.sky_spec)
@@ -69,7 +69,7 @@ class testCalcIG(unittest.TestCase):
         sed_1 = Sed()
         sed_1.setSED(wavelen=np.linspace(200., 1500., 1301),
                      flambda=np.ones(1301))
-        imsim_f_norm = sed_1.calcFluxNorm(19.0, self.imsimBand)
+        imsim_f_norm = sed_1.calcFluxNorm(21.2, self.imsimBand)
         sed_1.multiplyFluxNorm(imsim_f_norm)
         f_norm_1_0 = sed_1.calcFluxNorm(15.0, total_filt_dict_2['filter_0'])
         f_norm_1_1 = sed_1.calcFluxNorm(14.0, total_filt_dict_2['filter_1'])
@@ -92,27 +92,6 @@ class testCalcIG(unittest.TestCase):
 
         np.testing.assert_almost_equal([[1.0, 1.0]], colors2, 5)
 
-    def test_calc_h(self):
-
-        trap_dict = self.f.trap_filters([[740., 770., 830., 860.],
-                                         [740., 770., 830., 860.]])
-        sed_list = [self.red_spec, self.blue_spec]
-        sed_probs = [0.5, 0.5]
-        test_c = calcIG(trap_dict, sed_list, sed_probs)
-
-        self.assertEqual(-np.log2(0.5), test_c.calc_h())
-
-        sed_probs2 = [0.7, 0.3]
-        test_c2 = calcIG(trap_dict, sed_list, sed_probs2)
-
-        self.assertEqual(-0.3*np.log2(.3) - 0.7*np.log2(0.7), test_c2.calc_h())
-
-        sed_probs3 = [0.25, 0.25, 0.25, 0.25]
-        sed_list3 = [self.red_spec]*4
-        test_c3 = calcIG(trap_dict, sed_list3, sed_probs3)
-
-        self.assertEqual(-np.log2(0.25), test_c3.calc_h())
-
     def test_calc_hyx(self):
 
         trap_dict = self.f.trap_filters([[740., 770., 830., 860.],
@@ -120,7 +99,7 @@ class testCalcIG(unittest.TestCase):
         sed_probs = [0.5, 0.5]
         test_c = calcIG(trap_dict, [self.red_spec, self.red_spec],
                         sed_probs)
-        hy = test_c.calc_h()
+        hy = test_c.calc_h(sed_probs)
         colors, errors = test_c.calc_colors()
         hyx = test_c.calc_hyx(colors, errors)
 
