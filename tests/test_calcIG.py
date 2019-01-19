@@ -36,8 +36,17 @@ class testCalcIG(unittest.TestCase):
 
         sed_list = [self.red_spec, self.red_spec]
         sed_probs = [0.5, 0.5]
-        test_c = calcIG(trap_dict, sed_list, sed_probs,
-                        sed_mags=np.random.uniform(21.0, 23.0))
+
+        normed_sed_list = []
+        norm_mag = np.random.uniform(21., 23.)
+        for sed_obj in sed_list:
+            sed_copy = deepcopy(sed_obj)
+            f_norm = sed_copy.calcFluxNorm(norm_mag, 
+                                           self.imsimBand)
+            sed_copy.multiplyFluxNorm(f_norm)
+            normed_sed_list.append(sed_copy)
+
+        test_c = calcIG(trap_dict, normed_sed_list, sed_probs)
 
         colors, errors = test_c.calc_colors()
 
@@ -80,7 +89,7 @@ class testCalcIG(unittest.TestCase):
         flambda_1[700:] *= f_norm_1_2
         sed_1.flambda = flambda_1
 
-        test_c2 = calcIG(trap_dict_2, [sed_1], [1.0], sed_mags=15.0,
+        test_c2 = calcIG(trap_dict_2, [sed_1], [1.0],
                          ref_filter=total_filt_dict_2['filter_0'])
 
         colors2, errors2, snr2, mags2, sky_m2 = test_c2.calc_colors(
@@ -116,9 +125,13 @@ class testCalcIG(unittest.TestCase):
                                          [740., 770., 830., 860.]])
         sed_probs = [0.25, 0.25, 0.25, 0.25]
 
-        test_c = calcIG(trap_dict, [self.red_spec, self.red_spec,
-                                    self.red_spec, self.red_spec],
-                        sed_probs, sed_mags=23.)
+        red_copy = deepcopy(self.red_spec)
+        f_norm = red_copy.calcFluxNorm(23., self.imsimBand)
+        red_copy.multiplyFluxNorm(f_norm)
+        sed_list = [red_copy]*4
+
+        test_c = calcIG(trap_dict, sed_list,
+                        sed_probs)
 
         ig = test_c.calc_IG()
         self.assertAlmostEqual(ig, 0., delta=0.01)
@@ -129,9 +142,17 @@ class testCalcIG(unittest.TestCase):
                                            [740., 770., 830., 860.]])
 
         sed_probs_2 = [0.25, 0.25, 0.25, 0.25]
+
+        sed_list = [deepcopy(self.red_spec), deepcopy(self.red_spec_z_1),
+                    deepcopy(self.blue_spec), deepcopy(self.blue_spec_z_1)]
+
+        for sed_obj in sed_list:
+            f_norm = sed_obj.calcFluxNorm(10.0, self.imsimBand)
+            sed_obj.multiplyFluxNorm(f_norm)
+
         test_c_2 = calcIG(trap_dict_2, [self.red_spec, self.red_spec_z_1,
                                         self.blue_spec, self.blue_spec_z_1],
-                          sed_probs_2, sed_mags=10.0, sky_mag=20.0)
+                          sed_probs_2, sky_mag=20.0)
         ig_2 = test_c_2.calc_IG()
         self.assertAlmostEqual(ig_2, 2.0, delta=0.01)
 
