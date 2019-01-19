@@ -17,7 +17,7 @@ class plotting(_siggiBase):
     def __init__(self, sed_list, best_point, 
                  calib_filter=None, set_ratio=None,
                  frozen_filt_dict=None, frozen_filt_eff_wavelen=None,
-                 sky_mag=19.0, sed_mags=22.0):
+                 sky_mag=21.2, sed_mags=22.0):
 
         f = filters()
 
@@ -182,12 +182,12 @@ class plotting(_siggiBase):
 
         calc_ig = calcIG(color_x_dict, shift_seds,
                          np.ones(len(shift_seds)),
-                         sky_mag=self.sky_mag, sed_mags=self.sed_mags)
+                         sky_mag=self.sky_mag)
         col_x, err_x = calc_ig.calc_colors()
 
         calc_ig = calcIG(color_y_dict, shift_seds,
                          np.ones(len(shift_seds)),
-                         sky_mag=self.sky_mag, sed_mags=self.sed_mags)
+                         sky_mag=self.sky_mag)
         col_y, err_y = calc_ig.calc_colors()
 
         num_z = len(redshift_list)
@@ -278,15 +278,10 @@ class plotting(_siggiBase):
 
     def plot_color_distributions(self, filter_names, redshift_list,
                                  cmap=plt.get_cmap('plasma'), fig=None,
-                                 add_cbar=False):
+                                 add_cbar=False, include_prior=None):
 
         """
-        Plot the color-color tracks for each SED template as a function
-        of redshift using pairs of filters.
-        """
-
-        """
-        Plot the color-color tracks for each SED template as a function
+        Plot the distribution of colors for each SED template as a function
         of redshift using pairs of filters.
         """
 
@@ -299,7 +294,10 @@ class plotting(_siggiBase):
         for sed_obj in self.sed_list:
             for idx, z_val in list(enumerate(redshift_list)):
                 sed_copy = deepcopy(sed_obj)
-                sed_copy.redshiftSED(z_val)
+                f_norm = sed_copy.calcFluxNorm(self.sed_mags, 
+                                               self.calib_filter)
+                sed_copy.multiplyFluxNorm(f_norm)
+                sed_copy.redshiftSED(z_val, dimming=True)
                 shift_seds.append(sed_copy)
                 shift_values.append(idx)
 
@@ -308,8 +306,7 @@ class plotting(_siggiBase):
 
         calc_ig = calcIG(color_x_dict, shift_seds,
                          np.ones(len(shift_seds)),
-                         sky_mag=self.sky_mag,
-                         sed_mags=self.sed_mags)
+                         sky_mag=self.sky_mag)
         col_x, err_x = calc_ig.calc_colors()
 
         num_z = len(redshift_list)
@@ -322,7 +319,9 @@ class plotting(_siggiBase):
         for c, err, idx in zip(col_x, err_x, shift_values):
             pts = np.linspace(c[0]-5*err[0], c[0]+5*err[0], 100)
             vals = stats.norm.pdf(pts, loc=c[0], scale=err[0])
-            low_val = np.array([0]*len(vals))
+            if include_prior is not None:
+                vals *= include_prior(redshift_list[idx])
+
             plt.fill_between(pts, 0,
                              vals, alpha=0.3,
                              color=cmap(c_extent[idx]))
@@ -338,7 +337,7 @@ class plotting(_siggiBase):
                                         vmax=np.max(redshift_list)))
             sm._A = []
 
-            new_ax = fig.add_axes([0.07, 0.00, 0.91, 0.03])
+            new_ax = fig.add_axes([0.045, 0.03, 0.91, 0.03])
 
             cbar = plt.colorbar(sm, cax=new_ax, orientation='horizontal')
             cbar.set_label('Galaxy Redshift')

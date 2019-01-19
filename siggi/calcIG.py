@@ -16,11 +16,28 @@ class calcIG(mathUtils):
     """
     This class will take a set of SEDs and a set of filters
     and calculate the information gain.
+
+    Inputs
+    ------
+
+    filter_dict, dict
+
+        Dictionary with the bandpass objects for the filters to test.
+
+    sed_list, list
+
+        List with the template SEDs at the different redshifts and already
+        normalized in flux
+
+    sed_probs, list
+
+        List with the probabilities for each SED at the given redshift
+        in the same order as sed_list
     """
 
     def __init__(self, filter_dict, sed_list, sed_probs,
                  sky_mag=21.2, ref_filter=None, phot_params=None,
-                 fwhm_eff=1.0, sed_normed=True, sed_mags=22.0):
+                 fwhm_eff=1.0):
 
         self._sed_list = []
 
@@ -35,10 +52,6 @@ class calcIG(mathUtils):
                             flambda=sed_obj.flambda)
             sed_copy.resampleSED(wavelen_match=filter_dict.values()[0].wavelen)
             sed_copy.flambda[np.where(np.isnan(sed_copy.flambda))] = 0.
-
-            if sed_normed is False:
-                f_norm = sed_copy.calcFluxNorm(sed_mags, ref_filter)
-                sed_copy.multiplyFluxNorm(f_norm)
 
             self._sed_list.append(sed_copy)
 
