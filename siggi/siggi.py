@@ -280,6 +280,8 @@ class siggi(_siggiBase):
             while i < n_opt_points:
                 if ((i == 0) and (load_optimizer is None)):
                     x = x0
+                elif ((load_optimizer is not None) and (x0 is not None)):
+                    x = starting_points # Hack to avoid redoing the 3 base points
                 else:
                     x = []
                     pts_needed = procs
