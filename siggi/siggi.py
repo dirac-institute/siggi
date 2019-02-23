@@ -56,8 +56,8 @@ class siggi(_siggiBase):
 
     calib_mag, float, default = 22.0
 
-        The magnitude in the calib_filter bandpass to which rest
-        frame SEDs will be normalized.
+        The magnitude in the calib_filter bandpass to which observed
+        SEDs will be normalized.
     """
 
     def __init__(self, spec_list, spec_weights, z_prior,
@@ -81,9 +81,9 @@ class siggi(_siggiBase):
         for spec, weight in zip(spec_list, spec_weights):
             for z_val in np.linspace(z_min, z_max, z_steps):
                 spec_copy = deepcopy(spec)
+                spec_copy.redshiftSED(z_val)
                 f_norm = spec_copy.calcFluxNorm(calib_mag, self.calib_filter)
                 spec_copy.multiplyFluxNorm(f_norm)
-                spec_copy.redshiftSED(z_val, dimming=True)
                 self.shift_seds.append(spec_copy)
                 self.z_probs.append(z_prior(z_val)*weight)
 
@@ -280,6 +280,9 @@ class siggi(_siggiBase):
             while i < n_opt_points:
                 if ((i == 0) and (load_optimizer is None)):
                     x = x0
+                elif ((load_optimizer is not None) and
+                      (starting_points is not None)):
+                    x = starting_points # Hack to avoid redoing the 3 base points
                 else:
                     x = []
                     pts_needed = procs
