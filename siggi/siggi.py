@@ -255,6 +255,8 @@ class siggi(_siggiBase):
         if type(rand_state) is int:
             rand_state = np.random.RandomState(rand_state)
 
+        x1 = deepcopy(starting_points)
+
         dim_list, x0 = self.set_starting_points(starting_points,
                                                 self.num_filters,
                                                 filt_min,
@@ -281,8 +283,9 @@ class siggi(_siggiBase):
                 if ((i == 0) and (load_optimizer is None)):
                     x = x0
                 elif ((load_optimizer is not None) and
-                      (starting_points is not None)):
-                    x = starting_points # Hack to avoid redoing the 3 base points
+                      (starting_points is not None) and (i==0)):
+                    x = x1 # Hack to avoid redoing the 3 base points
+                    print(x)
                 else:
                     x = []
                     pts_needed = procs
