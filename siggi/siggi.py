@@ -62,7 +62,7 @@ class siggi(_siggiBase):
 
     def __init__(self, spec_list, spec_weights, z_prior,
                  z_min=0.05, z_max=2.5, z_steps=50,
-                 calib_filter=None, calib_mag=22.):
+                 calib_filter=None, calib_mag=25.):
 
         self.shift_seds = []
         self.z_probs = []
@@ -74,7 +74,7 @@ class siggi(_siggiBase):
             bandpassDir=bp_dict_folder)
 
         if calib_filter is None:
-            self.calib_filter = bp_dict['r']
+            self.calib_filter = bp_dict['i']
         else:
             self.calib_filter = calib_filter
 
@@ -88,7 +88,7 @@ class siggi(_siggiBase):
                 self.z_probs.append(z_prior(z_val)*weight)
 
     def optimize_filters(self, filt_min=300., filt_max=1100.,
-                         sky_mag=21.2, num_filters=6,
+                         sky_mag=20.47, num_filters=6,
                          filter_type='trap', frozen_filt_dict=None,
                          frozen_filt_eff_wavelen=None,
                          set_ratio=None,
