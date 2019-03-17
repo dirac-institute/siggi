@@ -17,7 +17,7 @@ class plotting(_siggiBase):
     def __init__(self, sed_list, best_point, 
                  calib_filter=None, set_ratio=None,
                  frozen_filt_dict=None, frozen_filt_eff_wavelen=None,
-                 sky_mag=21.2, sed_mags=22.0):
+                 sky_mag=20.47, sed_mags=25.0):
 
         f = filters()
 
@@ -73,7 +73,7 @@ class plotting(_siggiBase):
             bandpassDir=bp_dict_folder)
 
         if calib_filter is None:
-            self.calib_filter = bp_dict['r']
+            self.calib_filter = bp_dict['i']
         else:
             self.calib_filter = calib_filter
 
