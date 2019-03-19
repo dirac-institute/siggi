@@ -1,6 +1,4 @@
 import unittest
-import sys
-sys.path.append('..')
 from scipy.stats import norm, entropy
 import numpy as np
 from siggi import filters, spectra, calcIG
@@ -183,10 +181,8 @@ class testCalcIG(unittest.TestCase):
         test_c_3 = calcIG(trap_dict_3, sed_list_3,
                           sed_probs_3)
 
-        ig = test_c_3.calc_IG()
+        ig = test_c_3.calc_IG(rand_state=np.random.RandomState(17))
         colors, errors = test_c_3.calc_colors()
-        print(colors)
-        print(errors)
 
         print(ig)
 
@@ -194,12 +190,75 @@ class testCalcIG(unittest.TestCase):
         p1 = rv_1.pdf(np.arange(-2, 3, 0.001))
         rv_2 = norm(loc=colors[1], scale=errors[1])
         p2 = rv_2.pdf(np.arange(-2., 3, 0.001))
-        #rv_3 = norm(loc=mu_3, scale=sig_3)
-        #p3 = rv_3.pdf(np.arange(-3., 3, 0.001))
-        p3 = .5*p1 + .5*p2
+        p3 = p1 + p2
 
-        print(entropy(p1, p3, base=2))
-        print(entropy(p2, p3, base=2))
+        print(.5*entropy(p1, p3, base=2) + .5*entropy(p2, p3, base=2))
+
+        kl_div = .5*entropy(p1, p3, base=2) + .5*entropy(p2, p3, base=2)
+
+        self.assertAlmostEqual(ig, kl_div, delta=0.01)
+
+        # With one dimension should equal 1-d KL divergence
+        trap_dict_4 = self.f.trap_filters([[340., 370., 430., 460.],
+                                           [440., 470., 530., 560.]])
+        sed_probs_4 = [0.25, 0.25, 0.25, 0.25]
+
+        red_copy_3 = deepcopy(self.red_spec)
+        f_norm_3 = red_copy.calcFluxNorm(24.5, self.imsimBand)
+        red_copy_3.multiplyFluxNorm(f_norm_3)
+        red_copy_4 = deepcopy(self.blue_spec)
+        f_norm_4 = red_copy_4.calcFluxNorm(25.2, self.imsimBand)
+        red_copy_4.multiplyFluxNorm(f_norm_4)
+
+        sed_list_4 = [red_copy, red_copy_2, red_copy_3, red_copy_4]
+
+        test_c_4 = calcIG(trap_dict_4, sed_list_4,
+                          sed_probs_4)
+
+        ig = test_c_4.calc_IG(rand_state=np.random.RandomState(17))
+        colors, errors = test_c_4.calc_colors()
+
+        print(ig)
+
+        rv_1 = norm(loc=colors[0], scale=errors[0])
+        p1 = rv_1.pdf(np.arange(-2, 3, 0.001))
+        rv_2 = norm(loc=colors[1], scale=errors[1])
+        p2 = rv_2.pdf(np.arange(-2., 3, 0.001))
+        rv_3 = norm(loc=colors[2], scale=errors[2])
+        p3 = rv_3.pdf(np.arange(-2, 3, 0.001))
+        rv_4 = norm(loc=colors[3], scale=errors[3])
+        p4 = rv_4.pdf(np.arange(-2., 3, 0.001))
+        p5 = p1 + p2 + p3 + p4
+
+        print(.25*entropy(p1, p5, base=2) + .25*entropy(p2, p5, base=2) +
+              .25*entropy(p3, p5, base=2) + .25*entropy(p4, p5, base=2))
+
+        kl_div = .25*entropy(p1, p5, base=2) + .25*entropy(p2, p5, base=2) + \
+            .25*entropy(p3, p5, base=2) + .25*entropy(p4, p5, base=2)
+
+        self.assertAlmostEqual(ig, kl_div, delta=0.01)
+
+        # Colors of 0 don't mean 0 IG if errors are different.
+        trap_dict_5 = self.f.trap_filters([[340., 370., 430., 460.],
+                                           [340., 370., 430., 460.]])
+        sed_probs_5 = [0.5, 0.5]
+
+        sed_list_5 = [red_copy, red_copy_2]
+
+        test_c_5 = calcIG(trap_dict_5, sed_list_5,
+                          sed_probs_5)
+
+        ig = test_c_5.calc_IG(rand_state=np.random.RandomState(17))
+        colors, errors = test_c_5.calc_colors()
+
+        print(ig)
+
+        rv_1 = norm(loc=colors[0], scale=errors[0])
+        p1 = rv_1.pdf(np.arange(-2, 3, 0.001))
+        rv_2 = norm(loc=colors[1], scale=errors[1])
+        p2 = rv_2.pdf(np.arange(-2., 3, 0.001))
+        p3 = p1 + p2
+
         print(.5*entropy(p1, p3, base=2) + .5*entropy(p2, p3, base=2))
 
         kl_div = .5*entropy(p1, p3, base=2) + .5*entropy(p2, p3, base=2)

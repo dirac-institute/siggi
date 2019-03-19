@@ -148,7 +148,7 @@ class calcIG(mathUtils):
 
         y_vals = []
         y_distances = []
-        num_points = 20000
+        num_points = 25000
         x_total = np.zeros((num_seds*num_points, num_colors))
 
         for idx in range(num_seds):
