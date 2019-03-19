@@ -1,6 +1,6 @@
 import unittest
-from scipy.stats import norm, entropy
 import numpy as np
+from scipy.stats import norm, entropy, multivariate_normal
 from siggi import filters, spectra, calcIG
 from siggi import Sed, Bandpass, BandpassDict
 from siggi.lsst_utils import PhotometricParameters, calcMagError_sed
@@ -258,6 +258,40 @@ class testCalcIG(unittest.TestCase):
         p1 = rv_1.pdf(np.arange(-2, 3, 0.001))
         rv_2 = norm(loc=colors[1], scale=errors[1])
         p2 = rv_2.pdf(np.arange(-2., 3, 0.001))
+        p3 = p1 + p2
+
+        print(.5*entropy(p1, p3, base=2) + .5*entropy(p2, p3, base=2))
+
+        kl_div = .5*entropy(p1, p3, base=2) + .5*entropy(p2, p3, base=2)
+
+        self.assertAlmostEqual(ig, kl_div, delta=0.01)
+
+        # Test 2-dimensional example
+        trap_dict_6 = self.f.trap_filters([[340., 370., 430., 460.],
+                                           [340., 370., 430., 460.],
+                                           [440., 470., 530., 560.]])
+        sed_probs_6 = [0.5, 0.5]
+
+        sed_list_6 = [red_copy, red_copy_2]
+
+        test_c_6 = calcIG(trap_dict_6, sed_list_6,
+                          sed_probs_6)
+
+        ig = test_c_6.calc_IG(rand_state=np.random.RandomState(17))
+        colors, errors = test_c_6.calc_colors()
+
+        print(ig)
+
+        x, y = np.mgrid[-2:4:0.01, -2:4:0.01]
+        pos = np.dstack((x, y))
+        p1 = multivariate_normal.pdf(pos,
+                                     mean=colors[0],
+                                     cov=np.diag(errors[0]**2.))
+        p2 = multivariate_normal.pdf(pos,
+                                     mean=colors[1],
+                                     cov=np.diag(errors[1]**2.))
+        p1 = p1.flatten()
+        p2 = p2.flatten()
         p3 = p1 + p2
 
         print(.5*entropy(p1, p3, base=2) + .5*entropy(p2, p3, base=2))
