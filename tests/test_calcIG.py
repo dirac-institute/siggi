@@ -28,8 +28,9 @@ class testCalcIG(unittest.TestCase):
 
         phot_params = {}
         for idx in range(6):
-            phot_params['filter_%i' % idx] = PhotometricParameters(nexp=2,
-                sigmaSys=0.005, bandpass='filter_%i' % idx)
+            phot_params['filter_%i' % idx] = \
+                PhotometricParameters(nexp=2, sigmaSys=0.005,
+                                      bandpass='filter_%i' % idx)
 
         cls.phot_params = phot_params
 

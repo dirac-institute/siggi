@@ -1,6 +1,4 @@
 import os
-import sys
-sys.path.append('..')
 import unittest
 import pickle
 from siggi import siggi, filters, spectra

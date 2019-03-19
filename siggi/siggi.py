@@ -62,7 +62,8 @@ class siggi(_siggiBase):
 
     def __init__(self, spec_list, spec_weights, z_prior,
                  z_min=0.05, z_max=2.5, z_steps=50,
-                 calib_filter=None, calib_mag=25.):
+                 calib_filter=None, calib_mag=25.,
+                 phot_params=None):
 
         self.shift_seds = []
         self.z_probs = []
@@ -86,6 +87,8 @@ class siggi(_siggiBase):
                 spec_copy.multiplyFluxNorm(f_norm)
                 self.shift_seds.append(spec_copy)
                 self.z_probs.append(z_prior(z_val)*weight)
+
+        self.phot_params = phot_params
 
     def optimize_filters(self, filt_min=300., filt_max=1100.,
                          sky_mag=20.47, num_filters=6,
@@ -400,7 +403,8 @@ class siggi(_siggiBase):
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
                    sky_mag=self.sky_mag,
-                   ref_filter=self.calib_filter)
+                   ref_filter=self.calib_filter,
+                   phot_params=self.phot_params)
         step_result = c.calc_IG(rand_state=np.random.RandomState(
                         np.int(np.sum(filt_params))))
         if self.verbosity >= 10:
