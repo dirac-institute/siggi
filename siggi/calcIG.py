@@ -36,7 +36,7 @@ class calcIG(mathUtils):
     """
 
     def __init__(self, filter_dict, sed_list, sed_probs,
-                 sky_mag=21.2, ref_filter=None, phot_params=None,
+                 sky_mag=20.47, ref_filter=None, phot_params=None,
                  fwhm_eff=1.0):
 
         self._sed_list = []
@@ -63,8 +63,11 @@ class calcIG(mathUtils):
         self.sky_spec.multiplyFluxNorm(sky_fn)
 
         if phot_params is None:
-            # Use Default LSST parameters
-            self.phot_params = PhotometricParameters()
+            # Use Default LSST parameters + Same for new filters
+            self.phot_params = {}
+            for filt_name in filter_dict.keys():
+                self.phot_params[filt_name] = PhotometricParameters(
+                    bandpass=filt_name)
         else:
             self.phot_params = phot_params
 
@@ -93,10 +96,12 @@ class calcIG(mathUtils):
 
             mag_errors = [calcMagError_sed(sed_obj, filt_tot,
                                            self.sky_spec, filt_hw,
-                                           self.phot_params, self.fwhm_eff) for
-                          filt_tot, filt_hw in zip(
+                                           self.phot_params[filt_name],
+                                           self.fwhm_eff) for
+                          filt_tot, filt_hw, filt_name in zip(
                                 self._total_filt_dict.values(),
-                                self._hardware_filt_dict.values())]
+                                self._hardware_filt_dict.values(),
+                                self._total_filt_dict.keys())]
 
             if np.isnan(sed_mags[0]):
                 print(sed_mags)
@@ -109,10 +114,12 @@ class calcIG(mathUtils):
             if return_all is True:
                 snr_value = [calcSNR_sed(sed_obj, filt_tot,
                                          self.sky_spec, filt_hw,
-                                         self.phot_params, self.fwhm_eff) for
-                             filt_tot, filt_hw in zip(
+                                         self.phot_params[filt_name],
+                                         self.fwhm_eff) for
+                             filt_tot, filt_hw, filt_name in zip(
                                 self._total_filt_dict.values(),
-                                self._hardware_filt_dict.values())]
+                                self._hardware_filt_dict.values(),
+                                self._total_filt_dict.keys())]
                 snr_values.append(snr_value)
                 sed_mag_list.append(sed_mags)
 
@@ -141,7 +148,7 @@ class calcIG(mathUtils):
 
         y_vals = []
         y_distances = []
-        num_points = 10000
+        num_points = 25000
         x_total = np.zeros((num_seds*num_points, num_colors))
 
         for idx in range(num_seds):

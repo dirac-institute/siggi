@@ -28,10 +28,16 @@ class DefaultPhotometricParameters(object):
     #
     # 'any' values should be kept consistent with r band
 
-    bandpassNames = ['u', 'g', 'r', 'i', 'z', 'y', 'any']
+    bandpassNames = ['u', 'g', 'r', 'i',
+                     'z', 'y', 'any', 'filter_0',
+                     'filter_1', 'filter_2', 'filter_3',
+                     'filter_4', 'filter_5', 'filter_6']
 
     def makeDict(value,
-                 bandpassNames = ('u', 'g', 'r', 'i', 'z', 'y', 'any')):
+                 bandpassNames=('u', 'g', 'r', 'i',
+                                'z', 'y', 'any', 'filter_0',
+                                'filter_1', 'filter_2', 'filter_3',
+                                'filter_4', 'filter_5', 'filter_6')):
         newdict = {}
         for f in bandpassNames:
             newdict[f] = value
@@ -42,8 +48,14 @@ class DefaultPhotometricParameters(object):
     exptime = makeDict(exptimeSec)
 
     # number of exposures
-    nexpN = 2
-    nexp = makeDict(nexpN)
+    # nexpN = 2
+    # nexp = makeDict(nexpN)
+    # 2 times number of visits for 10 years
+    nexp = {'u': 56*2, 'g': 80*2, 'r': 184*2,
+            'i': 184*2, 'z': 160*2, 'y': 160*2,
+            'filter_0': 56*2, 'filter_1': 80*2, 'filter_2': 184*2,
+            'filter_3': 184*2, 'filter_4': 160*2, 'filter_5': 160*2,
+            'filter_6': 160*2, 'any': 100*2}
 
     # effective area in cm^2
     effareaCm2 = numpy.pi * (6.423/2.*100)**2
@@ -73,6 +85,9 @@ class DefaultPhotometricParameters(object):
     # see Table 14 of the SRD document
     # https://docushare.lsstcorp.org/docushare/dsweb/Get/LPM-17
     sigmaSys = {'u':0.0075, 'g':0.005, 'r':0.005, 'i':0.005, 'z':0.0075, 'y':0.0075,
+                'filter_0':0.0075, 'filter_1':0.005, 'filter_2':0.005,
+                'filter_3':0.005, 'filter_4':0.0075, 'filter_5':0.0075,
+                'filter_6':0.0075,
                 'any':0.005}
 
 
