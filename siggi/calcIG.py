@@ -7,6 +7,7 @@ from .mathUtils import mathUtils
 from . import Sed, Bandpass, BandpassDict, spectra
 from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
+from copy import deepcopy
 
 __all__ = ["calcIG"]
 
@@ -35,11 +36,13 @@ class calcIG(mathUtils):
         in the same order as sed_list
     """
 
-    def __init__(self, filter_dict, sed_list, sed_probs,
+    def __init__(self, filter_dict, sed_list, sed_probs, sed_labels, num_types,
                  sky_mag=20.47, ref_filter=None, phot_params=None,
                  fwhm_eff=1.0):
 
         self._sed_list = []
+        self.sed_labels = sed_labels
+        self.num_types = num_types
 
         if ref_filter is None:
             ref_filter = Bandpass()
@@ -148,8 +151,9 @@ class calcIG(mathUtils):
 
         y_vals = []
         y_distances = []
-        num_points = 25000
+        num_points = 50000
         x_total = np.zeros((num_seds*num_points, num_colors))
+        x_labelled = {str('%i' % x): [] for x in np.unique(self.sed_labels)}
 
         for idx in range(num_seds):
 
@@ -159,19 +163,20 @@ class calcIG(mathUtils):
 
             y_samples = y_samples.reshape(num_points, num_colors)
 
-            inv_cov = np.linalg.inv(np.diagflat(errors[idx]**2.))
+            # inv_cov = np.linalg.inv(np.diagflat(errors[idx]**2.))
 
-            y_dist = cdist(y_samples, [colors[idx]], metric='mahalanobis',
-                           VI=inv_cov).flatten()
-            y_sort = np.argsort(y_dist)
-            y_dist = y_dist[y_sort]
-            y_samples = y_samples[y_sort]
+            # y_dist = cdist(y_samples, [colors[idx]], metric='mahalanobis',
+            #                VI=inv_cov).flatten()
+            # y_sort = np.argsort(y_dist)
+            # y_dist = y_dist[y_sort]
+            # y_samples = y_samples[y_sort]
 
             x_total[idx*num_points:(idx+1)*num_points] = \
                 y_samples
+            x_labelled[str(self.sed_labels[idx])].append(y_samples)
 
             y_vals.append(y_samples)
-            y_distances.append(y_dist)
+            # y_distances.append(y_dist)
 
         y_vals = np.array(y_vals)
 
@@ -179,24 +184,93 @@ class calcIG(mathUtils):
 
         for idx in range(num_seds):
             pdf_dist = stats.multivariate_normal
-            y_dens = sed_probs[idx] * \
+            y_dens = sed_probs[self.sed_labels[idx]] * \
                 pdf_dist.pdf(x_total, mean=colors[idx],
-                             cov=np.diagflat(errors[idx])**2.)
+                             cov=np.diagflat(errors[idx])**2.) * (1/self.num_types)
             x_dens += y_dens
 
-        for idx in range(num_seds):
+        for label_val in np.unique(self.sed_labels):
 
-            y_samp = x_total[idx*num_points:(idx+1)*num_points]
-            y_dens = sed_probs[idx] * \
-                pdf_dist.pdf(y_samp, mean=colors[idx],
-                             cov=np.diagflat(errors[idx])**2.)
+            x_label = x_labelled[str(label_val)]
+            y_dens_total = np.zeros(num_points*self.num_types)
+            norm_factor = np.zeros(num_points*self.num_types)
+            x_dens_label = np.zeros(num_points*self.num_types)
 
-            norm_factor = self.calc_integral_scaling(y_distances[idx],
-                                                     num_colors, errors[idx])
+            i = 0
 
-            hyx_i = np.nansum(norm_factor * (y_dens * np.log2(y_dens /
-                                             x_dens[idx*num_points:(idx+1) *
-                                                    num_points])))
+            for idx in range(num_seds):
+
+                if self.sed_labels[idx] == label_val:
+
+                    start_idx = i*num_points
+                    end_idx = (i+1)*num_points
+
+                    x_label = np.array(deepcopy(x_label))
+                    x_label = x_label.reshape(num_points*self.num_types,
+                                              num_colors)
+
+                    y_dens = sed_probs[label_val] * \
+                        pdf_dist.pdf(x_label, mean=colors[idx],
+                                     cov=np.diagflat(errors[idx])**2.) * (1/self.num_types)
+                    y_dens_total += y_dens
+
+                    x_dens_label[start_idx:
+                                 end_idx] = x_dens[idx*num_points:
+                                                   (idx+1)*num_points]
+
+                    i += 1
+
+            hyx_i = 0
+            i = 0
+
+            for idx in range(num_seds):
+
+                if self.sed_labels[idx] == label_val:
+
+                    start_idx = i*num_points
+                    end_idx = (i+1)*num_points
+
+                    inv_cov = np.linalg.inv(np.diagflat(errors[idx]**2.))
+
+                    x_label = np.array(deepcopy(x_label))
+                    x_label = x_label.reshape(num_points*self.num_types,
+                                              num_colors)
+
+                    y_dist = cdist(x_label, [colors[idx]],
+                                   metric='mahalanobis',
+                                   VI=inv_cov).flatten()
+                    y_sort = np.argsort(y_dist)
+                    y_dist = y_dist[y_sort]
+
+                    x_label = x_label[y_sort]
+
+                    y_dens = sed_probs[label_val] * \
+                        pdf_dist.pdf(x_label, mean=colors[idx],
+                                     cov=np.diagflat(errors[idx])**2.) * (1/self.num_types)
+
+                    norm_factor = self.calc_integral_scaling(y_dist,
+                                                             num_colors,
+                                                             errors[idx])
+
+                    x_dens_sed = deepcopy(x_dens_label)
+                    x_dens_sed = x_dens_sed[y_sort]
+
+                    y_dens_sed = deepcopy(y_dens_total)
+                    y_dens_sed = y_dens_sed[y_sort]
+
+                    i += 1
+
+                    hyx_i += np.nansum(norm_factor * (y_dens * np.log2(y_dens_sed /
+                                       x_dens_sed))) #* (1/self.num_types)
+
+            # print(y_dens_total, np.sum(y_dens_total))
+            # print(x_dens_label, np.sum(x_dens_label))
+            # print(norm_factor)
+            # print(hyx_i, y_dens, np.sum(x_dens_sed))
+            # break
+
+            # hyx_i = np.nansum(norm_factor * (y_dens_total * np.log2(y_dens_total /
+            #                                  x_dens_label)))
             hyx_sum += hyx_i
 
         return -1.*hyx_sum
@@ -209,7 +283,8 @@ class calcIG(mathUtils):
         """
 
         colors, errors = self.calc_colors()
-        hy_sum = self.calc_h(self.sed_probs)
+        hy_sum = self.calc_h(self.sed_probs)#/self.num_types
+        print(hy_sum)
         hyx_sum = self.calc_hyx(colors, errors, rand_state)
 
         info_gain = hy_sum - hyx_sum
