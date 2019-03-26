@@ -1,6 +1,7 @@
 from __future__ import division
 
 import numpy as np
+from scipy import interpolate
 from scipy.spatial.distance import cdist
 from scipy import stats
 from .mathUtils import mathUtils
@@ -8,6 +9,7 @@ from . import Sed, Bandpass, BandpassDict, spectra
 from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
 from copy import deepcopy
+from sklearn.neighbors import BallTree
 
 __all__ = ["calcIG"]
 
@@ -36,27 +38,17 @@ class calcIG(mathUtils):
         in the same order as sed_list
     """
 
-    def __init__(self, filter_dict, sed_list, sed_probs, sed_labels, num_types,
+    def __init__(self, filter_dict, sed_list, y_probs, y_vals,
+                 n_pts=60000,
                  sky_mag=20.47, ref_filter=None, phot_params=None,
-                 fwhm_eff=1.0):
-
-        self._sed_list = []
-        self.sed_labels = sed_labels
-        self.num_types = num_types
+                 fwhm_eff=0.8):
 
         if ref_filter is None:
             ref_filter = Bandpass()
             ref_filter.imsimBandpass()
 
-        for sed_obj in sed_list:
-
-            sed_copy = Sed()
-            sed_copy.setSED(wavelen=sed_obj.wavelen,
-                            flambda=sed_obj.flambda)
-            sed_copy.resampleSED(wavelen_match=filter_dict.values()[0].wavelen)
-            sed_copy.flambda[np.where(np.isnan(sed_copy.flambda))] = 0.
-
-            self._sed_list.append(sed_copy)
+        self.sed_list = sed_list
+        self.n_pts = n_pts
 
         self._hardware_filt_dict, self._total_filt_dict = \
             BandpassDict.addSystemBandpass(filter_dict)
@@ -74,12 +66,17 @@ class calcIG(mathUtils):
         else:
             self.phot_params = phot_params
 
-        self.sed_probs = np.array(sed_probs)/np.sum(sed_probs)
+        self.y_probs = y_probs
+        self.y_vals = y_vals
         self.fwhm_eff = fwhm_eff
+
+        self.n_colors = len(self._total_filt_dict.keys()) - 1
+        self.n_seds = len(sed_list[0])
+        self.y_steps = len(y_vals) - 1
 
         return
 
-    def calc_colors(self, return_all=False):
+    def calc_colors(self, sed_list, return_all=False):
 
         """
         Calculate the colors and errors in color measurement
@@ -93,7 +90,9 @@ class calcIG(mathUtils):
 
         sky_mags = self._total_filt_dict.magListForSed(self.sky_spec)
 
-        for sed_obj in self._sed_list:
+        for sed_item in sed_list:
+
+            sed_obj = deepcopy(sed_item)
 
             sed_mags = self._total_filt_dict.magListForSed(sed_obj)
 
@@ -132,148 +131,108 @@ class calcIG(mathUtils):
 
         return np.array(sed_colors), np.array(color_errors)
 
-    def calc_hyx(self, colors, errors, rand_state=None):
+    def nearest_neighbors_density(self, x, radius, normalize=True):
+
+        x = np.asarray(x)
+
+        bt = BallTree(x)
+
+        counts = bt.query_radius(x, radius, count_only=True)
+        counts = counts.astype(float)
+
+        if normalize:
+            counts /= x.shape[0] * (radius ** x.shape[1])
+
+        return counts.astype(float)
+
+    def calc_gain(self, rand_state=None):
 
         """
-        Calculate the conditional entropy.
+        Calculate the information gain.
         """
 
         if rand_state is None:
             rand_state = np.random.RandomState()
 
-        sed_probs = self.sed_probs
+        # Set up draws of the prior distribution
+        y_probs = deepcopy(self.y_probs)
+        # Make sure probability function starts at (0., 0.)
+        if y_probs[0] != 0.:
+            raise ValueError('Make sure probability function' +
+                             ' starts at (0., 0.)')
 
-        hyx_sum = 0
+        y_probs /= np.sum(y_probs)
+        y_cum = y_probs.cumsum()
+        n_pts = self.n_pts
 
-        num_seds, num_colors = np.shape(colors)
+        if len(self.y_vals) > 3:
+            fy = interpolate.splrep(y_cum, self.y_vals)
+        else:
+            fy = interpolate.splrep(y_cum, self.y_vals,
+                                    k=len(self.y_vals)-1)
+        samp_y = rand_state.uniform(size=n_pts)
+        fy_samp = interpolate.splev(samp_y, fy)
 
-        rv = rand_state.multivariate_normal
+        # Assign to redshift bin
+        i_sort = fy_samp.argsort()
+        fy_sorted = fy_samp[i_sort]
 
-        y_vals = []
-        y_distances = []
-        num_points = 50000
-        x_total = np.zeros((num_seds*num_points, num_colors))
-        x_labelled = {str('%i' % x): [] for x in np.unique(self.sed_labels)}
+        # Find indices of z bins
+        y_bin_idx = fy_sorted.searchsorted(self.y_vals)
+        bin_counts = np.diff(y_bin_idx)
 
-        for idx in range(num_seds):
+        # Calc Total Entropy
+        py = bin_counts / n_pts
+        hy = self.calc_h(py)
 
-            y_samples = rv(mean=colors[idx],
-                           cov=np.diagflat(errors[idx]**2.),
-                           size=num_points)
+        # Calc Color distributions
+        colors = []
+        errors = []
+        for bin_idx in range(self.y_steps):
+            bin_colors, bin_errors = self.calc_colors(self.sed_list[bin_idx])
+            colors.append(bin_colors)
+            errors.append(bin_errors)
 
-            y_samples = y_samples.reshape(num_points, num_colors)
+        # Store distributions as functions
+        color_funcs = []
+        for y_idx in range(self.y_steps):
+            color_funcs.append([])
+            for sed_num in range(self.n_seds):
+                color_funcs[-1].append(
+                    stats.multivariate_normal(mean=colors[y_idx][sed_num],
+                                              cov=np.diag(errors[y_idx][sed_num])**2.))
 
-            # inv_cov = np.linalg.inv(np.diagflat(errors[idx]**2.))
+        # Draw samples from color distributions
+        x_sample = np.zeros((n_pts, self.n_colors))
+        dx_sample = np.zeros((n_pts))
 
-            # y_dist = cdist(y_samples, [colors[idx]], metric='mahalanobis',
-            #                VI=inv_cov).flatten()
-            # y_sort = np.argsort(y_dist)
-            # y_dist = y_dist[y_sort]
-            # y_samples = y_samples[y_sort]
+        x_idx = 0
+        for idx in range(self.y_steps):
+            func_choose = rand_state.randint(self.n_seds, size=bin_counts[idx])
+            func_count = np.bincount(func_choose)
+            for func_num in range(len(func_count)):
+                slc = slice(x_idx, x_idx + func_count[func_num])
+                func_x_samp = color_funcs[idx][func_num].rvs(size=func_count[func_num],
+                                                             random_state=rand_state)
+                x_sample[slc] = func_x_samp.reshape(func_count[func_num], self.n_colors)
+                dx_sample[slc] = np.linalg.norm(errors[idx][func_num])
+                x_idx += func_count[func_num]
 
-            x_total[idx*num_points:(idx+1)*num_points] = \
-                y_samples
-            x_labelled[str(self.sed_labels[idx])].append(y_samples)
+        # Calc pxy from density
+        pxy = np.zeros(n_pts)
+        for idx in range(self.y_steps):
+            slc = slice(y_bin_idx[idx], y_bin_idx[idx+1])
+            pxy[slc] = self.nearest_neighbors_density(x_sample[slc],
+                                                      dx_sample[slc],
+                                                      normalize=True)
 
-            y_vals.append(y_samples)
-            # y_distances.append(y_dist)
+        # Calc px from density
+        px = self.nearest_neighbors_density(x_sample, dx_sample,
+                                            normalize=True)
 
-        y_vals = np.array(y_vals)
+        ig = (1./n_pts) * np.log2(pxy / px).sum()
 
-        x_dens = np.zeros(len(x_total))
-
-        for idx in range(num_seds):
-            pdf_dist = stats.multivariate_normal
-            y_dens = sed_probs[self.sed_labels[idx]] * \
-                pdf_dist.pdf(x_total, mean=colors[idx],
-                             cov=np.diagflat(errors[idx])**2.) * (1/self.num_types)
-            x_dens += y_dens
-
-        for label_val in np.unique(self.sed_labels):
-
-            x_label = x_labelled[str(label_val)]
-            y_dens_total = np.zeros(num_points*self.num_types)
-            norm_factor = np.zeros(num_points*self.num_types)
-            x_dens_label = np.zeros(num_points*self.num_types)
-
-            i = 0
-
-            for idx in range(num_seds):
-
-                if self.sed_labels[idx] == label_val:
-
-                    start_idx = i*num_points
-                    end_idx = (i+1)*num_points
-
-                    x_label = np.array(deepcopy(x_label))
-                    x_label = x_label.reshape(num_points*self.num_types,
-                                              num_colors)
-
-                    y_dens = sed_probs[label_val] * \
-                        pdf_dist.pdf(x_label, mean=colors[idx],
-                                     cov=np.diagflat(errors[idx])**2.) * (1/self.num_types)
-                    y_dens_total += y_dens
-
-                    x_dens_label[start_idx:
-                                 end_idx] = x_dens[idx*num_points:
-                                                   (idx+1)*num_points]
-
-                    i += 1
-
-            hyx_i = 0
-            i = 0
-
-            for idx in range(num_seds):
-
-                if self.sed_labels[idx] == label_val:
-
-                    start_idx = i*num_points
-                    end_idx = (i+1)*num_points
-
-                    inv_cov = np.linalg.inv(np.diagflat(errors[idx]**2.))
-
-                    x_label = np.array(deepcopy(x_label))
-                    x_label = x_label.reshape(num_points*self.num_types,
-                                              num_colors)
-
-                    y_dist = cdist(x_label, [colors[idx]],
-                                   metric='mahalanobis',
-                                   VI=inv_cov).flatten()
-                    y_sort = np.argsort(y_dist)
-                    y_dist = y_dist[y_sort]
-
-                    x_label = x_label[y_sort]
-
-                    y_dens = sed_probs[label_val] * \
-                        pdf_dist.pdf(x_label, mean=colors[idx],
-                                     cov=np.diagflat(errors[idx])**2.) * (1/self.num_types)
-
-                    norm_factor = self.calc_integral_scaling(y_dist,
-                                                             num_colors,
-                                                             errors[idx])
-
-                    x_dens_sed = deepcopy(x_dens_label)
-                    x_dens_sed = x_dens_sed[y_sort]
-
-                    y_dens_sed = deepcopy(y_dens_total)
-                    y_dens_sed = y_dens_sed[y_sort]
-
-                    i += 1
-
-                    hyx_i += np.nansum(norm_factor * (y_dens * np.log2(y_dens_sed /
-                                       x_dens_sed))) #* (1/self.num_types)
-
-            # print(y_dens_total, np.sum(y_dens_total))
-            # print(x_dens_label, np.sum(x_dens_label))
-            # print(norm_factor)
-            # print(hyx_i, y_dens, np.sum(x_dens_sed))
-            # break
-
-            # hyx_i = np.nansum(norm_factor * (y_dens_total * np.log2(y_dens_total /
-            #                                  x_dens_label)))
-            hyx_sum += hyx_i
-
-        return -1.*hyx_sum
+        return ig, hy
 
     def calc_IG(self, rand_state=None):
 
@@ -282,11 +241,8 @@ class calcIG(mathUtils):
         to get information gain.
         """
 
-        colors, errors = self.calc_colors()
-        hy_sum = self.calc_h(self.sed_probs)#/self.num_types
-        print(hy_sum)
-        hyx_sum = self.calc_hyx(colors, errors, rand_state)
+        info_gain, h_y = self.calc_gain(rand_state)
 
-        info_gain = hy_sum - hyx_sum
+        print(info_gain, h_y)
 
         return info_gain
