@@ -1,6 +1,6 @@
 import unittest
-import sys
-sys.path.append('..')
+# import sys
+# sys.path.append('..')
 import numpy as np
 from scipy.stats import norm, entropy, multivariate_normal
 from siggi import filters, spectra, calcIG
@@ -60,7 +60,7 @@ class testCalcIG(unittest.TestCase):
             i += 1
 
         test_c = calcIG(trap_dict, [normed_sed_list], [1.], [1.],
-                        n_pts=20000,
+                        n_pts=40000,
                         sky_mag=21.2, phot_params=self.phot_params)
 
         colors, errors = test_c.calc_colors(normed_sed_list)
@@ -149,7 +149,7 @@ class testCalcIG(unittest.TestCase):
         sed_list = [[red_copy]]*4
 
         test_c = calcIG(trap_dict, sed_list,
-                        sed_probs, [0.0, 1, 2, 3, 4], n_pts=10000)
+                        sed_probs, [0.0, 1, 2, 3, 4], n_pts=40000)
 
         ig = test_c.calc_IG()
         self.assertAlmostEqual(ig, 0., delta=0.01)
@@ -166,12 +166,12 @@ class testCalcIG(unittest.TestCase):
 
         for sed_item in sed_list:
             sed_obj = sed_item[0]
-            f_norm = sed_obj.calcFluxNorm(10.0, self.imsimBand)
+            f_norm = sed_obj.calcFluxNorm(6.0, self.imsimBand)
             sed_obj.multiplyFluxNorm(f_norm)
 
         test_c_2 = calcIG(trap_dict_2, sed_list,
                           sed_probs_2, [0, 1, 2, 3, 4],
-                          n_pts=10000, sky_mag=20.0)
+                          n_pts=40000, sky_mag=24.0)
         ig_2 = test_c_2.calc_IG()
         self.assertAlmostEqual(ig_2, 2.0, delta=0.01)
 
@@ -190,7 +190,7 @@ class testCalcIG(unittest.TestCase):
         sed_list_3 = [[red_copy], [red_copy_2]]
 
         test_c_3 = calcIG(trap_dict_3, sed_list_3,
-                          sed_probs_3, [0, 1, 2], n_pts=50000)
+                          sed_probs_3, [0, 1, 2], n_pts=40000)
 
         ig = test_c_3.calc_IG(rand_state=np.random.RandomState(37))
         colors = []
@@ -212,7 +212,7 @@ class testCalcIG(unittest.TestCase):
 
         kl_div = .5*entropy(p1, p3, base=2) + .5*entropy(p2, p3, base=2)
 
-        #self.assertAlmostEqual(ig, kl_div, delta=0.01)
+        self.assertAlmostEqual(ig, kl_div, delta=0.01)
 
         # # With one dimension should equal 1-d KL divergence
         trap_dict_4 = self.f.trap_filters([[340., 370., 430., 460.],
@@ -230,7 +230,7 @@ class testCalcIG(unittest.TestCase):
                       [red_copy_3], [red_copy_4]]
 
         test_c_4 = calcIG(trap_dict_4, sed_list_4,
-                          sed_probs_4, [0, 1, 2, 3, 4], n_pts=50000)
+                          sed_probs_4, [0, 1, 2, 3, 4], n_pts=40000)
 
         ig = test_c_4.calc_IG(rand_state=np.random.RandomState(17))
         colors = []
@@ -258,7 +258,7 @@ class testCalcIG(unittest.TestCase):
         kl_div = .25*entropy(p1, p5, base=2) + .25*entropy(p2, p5, base=2) + \
             .25*entropy(p3, p5, base=2) + .25*entropy(p4, p5, base=2)
 
-        #self.assertAlmostEqual(ig, kl_div, delta=0.01)
+        self.assertAlmostEqual(ig, kl_div, delta=0.01)
 
         # Colors of 0 don't mean 0 IG if errors are different.
         trap_dict_5 = self.f.trap_filters([[340., 370., 430., 460.],
@@ -268,7 +268,7 @@ class testCalcIG(unittest.TestCase):
         sed_list_5 = [[red_copy], [red_copy_2]]
 
         test_c_5 = calcIG(trap_dict_5, sed_list_5,
-                          sed_probs_5, [0, 1, 2], n_pts=10000)
+                          sed_probs_5, [0, 1, 2], n_pts=40000)
 
         ig = test_c_5.calc_IG(rand_state=np.random.RandomState(17))
         colors = []
@@ -290,7 +290,7 @@ class testCalcIG(unittest.TestCase):
 
         kl_div = .5*entropy(p1, p3, base=2) + .5*entropy(p2, p3, base=2)
 
-        #self.assertAlmostEqual(ig, kl_div, delta=0.01)
+        self.assertAlmostEqual(ig, kl_div, delta=0.01)
 
         # Test 2-dimensional example
         trap_dict_6 = self.f.trap_filters([[340., 370., 430., 460.],
@@ -301,7 +301,7 @@ class testCalcIG(unittest.TestCase):
         sed_list_6 = [[red_copy], [red_copy_2]]
 
         test_c_6 = calcIG(trap_dict_6, sed_list_6,
-                          sed_probs_6, [0, 1, 2], n_pts=10000)
+                          sed_probs_6, [0, 1, 2], n_pts=40000)
 
         ig = test_c_6.calc_IG(rand_state=np.random.RandomState(17))
         colors = []
@@ -341,7 +341,7 @@ class testCalcIG(unittest.TestCase):
         sed_list_6 = [[red_copy], [red_copy_2], [red_copy_3]]
 
         test_c_6 = calcIG(trap_dict_6, sed_list_6,
-                          sed_probs_6, [0, 1, 2, 3], n_pts=10000)
+                          sed_probs_6, [0, 1, 2, 3], n_pts=250000)
 
         ig = test_c_6.calc_IG(rand_state=np.random.RandomState(17))
         colors = []
@@ -388,11 +388,11 @@ class testCalcIG(unittest.TestCase):
 
         red_copy = deepcopy(self.red_spec)
         red_copy.redshiftSED(0.1)
-        f_norm = red_copy.calcFluxNorm(24.6, self.imsimBand)
+        f_norm = red_copy.calcFluxNorm(25., self.imsimBand)
         red_copy.multiplyFluxNorm(f_norm)
         red_copy_2 = deepcopy(self.blue_spec)
         red_copy_2.redshiftSED(0.1)
-        f_norm_2 = red_copy_2.calcFluxNorm(24.6, self.imsimBand)
+        f_norm_2 = red_copy_2.calcFluxNorm(25., self.imsimBand)
         red_copy_2.multiplyFluxNorm(f_norm_2)
         red_copy_3 = deepcopy(self.red_spec)
         f_norm = red_copy_3.calcFluxNorm(24.2, self.imsimBand)
@@ -401,36 +401,36 @@ class testCalcIG(unittest.TestCase):
         f_norm_2 = red_copy_4.calcFluxNorm(24.2, self.imsimBand)
         red_copy_4.multiplyFluxNorm(f_norm_2)
 
-        sed_list_6 = [[red_copy], [red_copy_2],
-                      [red_copy_3], [red_copy_4]]
+        sed_list_6 = [[red_copy, red_copy_3],
+                      [red_copy_2, red_copy_4]]
 
         test_c_6 = calcIG(trap_dict_6, sed_list_6,
-                          sed_probs_6, [0, 1, 2], n_pts=10000)
+                          sed_probs_6, [0, 1, 2], n_pts=80000)
 
         ig = test_c_6.calc_IG(rand_state=np.random.RandomState(17))
         colors = []
         errors = []
         for sed_item in sed_list_6:
             c, e = test_c_6.calc_colors(sed_item)
-            colors.append(c[0])
-            errors.append(e[0])
+            colors.append(c)
+            errors.append(e)
 
-        print(ig, colors, errors)
+        print(ig)
 
-        x, y = np.mgrid[-2:3:0.01, -2:3:0.01]
+        x, y = np.mgrid[-2:3:0.005, -2:3:0.005]
         pos = np.dstack((x, y))
         p1 = multivariate_normal.pdf(pos,
-                                     mean=colors[0],
-                                     cov=np.diag(errors[0]**2.))
+                                     mean=colors[0][0],
+                                     cov=np.diag(errors[0][0]**2.))
         p2 = multivariate_normal.pdf(pos,
-                                     mean=colors[1],
-                                     cov=np.diag(errors[1]**2.))
+                                     mean=colors[1][0],
+                                     cov=np.diag(errors[1][0]**2.))
         p3 = multivariate_normal.pdf(pos,
-                                     mean=colors[2],
-                                     cov=np.diag(errors[2]**2.))
+                                     mean=colors[0][1],
+                                     cov=np.diag(errors[0][1]**2.))
         p4 = multivariate_normal.pdf(pos,
-                                     mean=colors[3],
-                                     cov=np.diag(errors[3]**2.))
+                                     mean=colors[1][1],
+                                     cov=np.diag(errors[1][1]**2.))
         p1 = p1.flatten()
         p2 = p2.flatten()
         p3 = p3.flatten()

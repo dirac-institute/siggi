@@ -9,7 +9,7 @@ from . import Sed, Bandpass, BandpassDict, spectra
 from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
 from copy import deepcopy
-from sklearn.neighbors import BallTree, KernelDensity
+from sklearn.neighbors import BallTree, KernelDensity, NearestNeighbors
 
 __all__ = ["calcIG"]
 
@@ -39,7 +39,7 @@ class calcIG(mathUtils):
     """
 
     def __init__(self, filter_dict, sed_list, y_probs, y_vals,
-                 n_pts=10000,
+                 n_pts=150000,
                  sky_mag=20.47, ref_filter=None, phot_params=None,
                  fwhm_eff=0.8):
 
@@ -145,6 +145,20 @@ class calcIG(mathUtils):
 
         return counts.astype(float)
 
+    def knn_density(self, x, n_neighbors):
+
+        x = np.asarray(x)
+
+        if n_neighbors > len(x)*.9:
+            n_neighbors = int(len(x)*.9)
+
+        bt = NearestNeighbors(n_neighbors=n_neighbors).fit(x)
+
+        dist, indices = bt.kneighbors()
+        dist = dist.astype(float)
+
+        return dist
+
     def kernel_estimate_density(self, x, h):
 
         x = np.asarray(x)
@@ -229,17 +243,24 @@ class calcIG(mathUtils):
                 x_idx += func_count[func_num]
 
         # Calc pxy from density
+        n_neighbors = 150
         pxy = np.zeros(n_pts)
+        dist = np.zeros(n_pts)
         for idx in range(self.y_steps):
             slc = slice(y_bin_idx[idx], y_bin_idx[idx+1])
-            pxy[slc] = self.nearest_neighbors_density(x_sample[slc],
-                                                      dx_sample[slc],
-                                                      normalize=True)
+            # pxy[slc] = self.nearest_neighbors_density(x_sample[slc],
+            #                                           dx_sample[slc],
+            #                                           normalize=True)
             # pxy[slc] = self.kernel_estimate_density(x_sample[slc], 0.08)#np.mean(dx_sample[slc]))
+            dist_slc = self.knn_density(x_sample[slc], n_neighbors)
+            pxy[slc] = n_neighbors# / (dist_slc[:, -1] ** x_sample.shape[1])
+            dist[slc] = dist_slc[:, -1]
 
         # Calc px from density
-        px = self.nearest_neighbors_density(x_sample, dx_sample,
-                                            normalize=True)
+        px = self.nearest_neighbors_density(x_sample, dist,
+                                            normalize=False)
+        # px = px / (dist ** x_sample.shape[1])
+        # px = self.knn_density(x_sample, 3)
         # px = self.kernel_estimate_density(x_sample, 0.08)#np.mean(dx_sample))
 
         # pxy = np.exp(pxy)
@@ -247,11 +268,12 @@ class calcIG(mathUtils):
 
         print(pxy)
         print(px)
-        print(dx_sample)
+        # print(dx_sample)
 
-        ig = (1./n_pts) * np.log2(pxy / px).sum()
+        # ig = (1./n_pts) * np.log2(pxy / px).sum()
+        ig = (1./n_pts) * np.log2((px) / pxy).sum()
 
-        return ig, hy
+        return hy - ig, hy
 
     def calc_IG(self, rand_state=None):
 

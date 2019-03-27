@@ -81,20 +81,19 @@ class siggi(_siggiBase):
             self.calib_filter = calib_filter
 
         z_vals = np.linspace(z_min, z_max, z_steps)
-        sed_labels = {str(x): int(y) for x, y in zip(z_vals,
-                                                     np.arange(len(z_vals)))}
-        self.labels_list = []
 
         self.z_probs = z_prior(z_vals)
+        self.z_vals = z_vals
 
-        for spec, weight in zip(spec_list, spec_weights):
-            for z_val in z_vals:
+        for z_val in z_vals:
+            z_specs = []
+            for spec in spec_list:
                 spec_copy = deepcopy(spec)
                 spec_copy.redshiftSED(z_val)
                 f_norm = spec_copy.calcFluxNorm(calib_mag, self.calib_filter)
                 spec_copy.multiplyFluxNorm(f_norm)
-                self.shift_seds.append(spec_copy)
-                self.labels_list.append(sed_labels[str(z_val)])
+                z_specs.append(spec_copy)
+            self.shift_seds.append(z_specs)
 
         self.phot_params = phot_params
 
@@ -410,7 +409,7 @@ class siggi(_siggiBase):
             return 0
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
-                   self.labels_list, self.num_sed_types,
+                   self.z_vals,
                    sky_mag=self.sky_mag,
                    ref_filter=self.calib_filter,
                    phot_params=self.phot_params)
