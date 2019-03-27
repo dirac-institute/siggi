@@ -9,7 +9,7 @@ from . import Sed, Bandpass, BandpassDict, spectra
 from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
 from copy import deepcopy
-from sklearn.neighbors import BallTree
+from sklearn.neighbors import BallTree, KernelDensity
 
 __all__ = ["calcIG"]
 
@@ -39,7 +39,7 @@ class calcIG(mathUtils):
     """
 
     def __init__(self, filter_dict, sed_list, y_probs, y_vals,
-                 n_pts=60000,
+                 n_pts=10000,
                  sky_mag=20.47, ref_filter=None, phot_params=None,
                  fwhm_eff=0.8):
 
@@ -145,6 +145,16 @@ class calcIG(mathUtils):
 
         return counts.astype(float)
 
+    def kernel_estimate_density(self, x, h):
+
+        x = np.asarray(x)
+
+        kde = KernelDensity(kernel='epanechnikov', bandwidth=h, rtol=1e-4).fit(x)
+
+        dens_est = kde.score_samples(x)
+
+        return dens_est.astype(float)
+
     def calc_gain(self, rand_state=None):
 
         """
@@ -225,10 +235,19 @@ class calcIG(mathUtils):
             pxy[slc] = self.nearest_neighbors_density(x_sample[slc],
                                                       dx_sample[slc],
                                                       normalize=True)
+            # pxy[slc] = self.kernel_estimate_density(x_sample[slc], 0.08)#np.mean(dx_sample[slc]))
 
         # Calc px from density
         px = self.nearest_neighbors_density(x_sample, dx_sample,
                                             normalize=True)
+        # px = self.kernel_estimate_density(x_sample, 0.08)#np.mean(dx_sample))
+
+        # pxy = np.exp(pxy)
+        # px = np.exp(px)
+
+        print(pxy)
+        print(px)
+        print(dx_sample)
 
         ig = (1./n_pts) * np.log2(pxy / px).sum()
 
