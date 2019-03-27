@@ -39,7 +39,7 @@ class calcIG(mathUtils):
     """
 
     def __init__(self, filter_dict, sed_list, y_probs, y_vals,
-                 n_pts=150000,
+                 n_pts=250000,
                  sky_mag=20.47, ref_filter=None, phot_params=None,
                  fwhm_eff=0.8):
 
@@ -230,6 +230,7 @@ class calcIG(mathUtils):
         x_sample = np.zeros((n_pts, self.n_colors))
         dx_sample = np.zeros((n_pts))
 
+
         x_idx = 0
         for idx in range(self.y_steps):
             func_choose = rand_state.randint(self.n_seds, size=bin_counts[idx])
@@ -242,38 +243,26 @@ class calcIG(mathUtils):
                 dx_sample[slc] = np.linalg.norm(errors[idx][func_num])
                 x_idx += func_count[func_num]
 
-        # Calc pxy from density
-        n_neighbors = 150
         pxy = np.zeros(n_pts)
-        dist = np.zeros(n_pts)
+        px = np.zeros(n_pts)
+        x_idx = 0
         for idx in range(self.y_steps):
-            slc = slice(y_bin_idx[idx], y_bin_idx[idx+1])
-            # pxy[slc] = self.nearest_neighbors_density(x_sample[slc],
-            #                                           dx_sample[slc],
-            #                                           normalize=True)
-            # pxy[slc] = self.kernel_estimate_density(x_sample[slc], 0.08)#np.mean(dx_sample[slc]))
-            dist_slc = self.knn_density(x_sample[slc], n_neighbors)
-            pxy[slc] = n_neighbors# / (dist_slc[:, -1] ** x_sample.shape[1])
-            dist[slc] = dist_slc[:, -1]
+            slc = slice(x_idx, x_idx + bin_counts[idx])
+            for func_num in range(len(func_count)):
+                func_px_samp = color_funcs[idx][func_num].pdf(x_sample)
+                pxy[slc] += func_px_samp[slc] * (1/(self.n_seds))
+                px += func_px_samp * (1./(self.n_seds))
+            x_idx += bin_counts[idx]
 
-        # Calc px from density
-        px = self.nearest_neighbors_density(x_sample, dist,
-                                            normalize=False)
-        # px = px / (dist ** x_sample.shape[1])
-        # px = self.knn_density(x_sample, 3)
-        # px = self.kernel_estimate_density(x_sample, 0.08)#np.mean(dx_sample))
+        # print(pxy)
+        # print(px)
+        # # print(dx_sample)
+        # print(px.sum())
 
-        # pxy = np.exp(pxy)
-        # px = np.exp(px)
+        ig = (1./n_pts) * np.log2(pxy / px).sum()
+        # ig = (1./n_pts) * np.log2((px) / pxy).sum()
 
-        print(pxy)
-        print(px)
-        # print(dx_sample)
-
-        # ig = (1./n_pts) * np.log2(pxy / px).sum()
-        ig = (1./n_pts) * np.log2((px) / pxy).sum()
-
-        return hy - ig, hy
+        return hy + ig, hy
 
     def calc_IG(self, rand_state=None):
 

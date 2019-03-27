@@ -377,7 +377,7 @@ class testCalcIG(unittest.TestCase):
             (1./3.)*entropy(p2, p4, base=2) + \
             (1./3.)*entropy(p3, p4, base=2)
 
-        #self.assertAlmostEqual(ig, kl_div, delta=0.01)
+        self.assertAlmostEqual(ig, kl_div, delta=0.01)
 
         # Test > 2 values
 
@@ -405,7 +405,7 @@ class testCalcIG(unittest.TestCase):
                       [red_copy_2, red_copy_4]]
 
         test_c_6 = calcIG(trap_dict_6, sed_list_6,
-                          sed_probs_6, [0, 1, 2], n_pts=80000)
+                          sed_probs_6, [0, 1, 2], n_pts=250000)
 
         ig = test_c_6.calc_IG(rand_state=np.random.RandomState(17))
         colors = []
