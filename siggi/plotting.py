@@ -208,8 +208,8 @@ class plotting(_siggiBase):
         err_y = []
         for z_seds in shift_seds:
             cy, ey = calc_ig.calc_colors(z_seds)
-            col_y.append(cx)
-            err_y.append(ex)
+            col_y.append(cy)
+            err_y.append(ey)
         col_y = np.array(col_y).reshape(len(shift_values))
         err_y = np.array(err_y).reshape(len(shift_values))
 
@@ -217,11 +217,12 @@ class plotting(_siggiBase):
 
         for sed_num in range(len(self.sed_list)):
 
-            start_idx = sed_num*num_z
-            end_idx = start_idx + num_z
+            start_idx = sed_num
+            end_idx = len(shift_seds)*len(self.sed_list)
+            slc = slice(start_idx, end_idx, len(self.sed_list))
 
-            self.colorline(col_x[start_idx:end_idx],
-                           col_y[start_idx:end_idx],
+            self.colorline(col_x[slc],
+                           col_y[slc],
                            cmap=cmap)
 
         plt.xlabel('%s - %s' % (filter_names[0], filter_names[1]))
