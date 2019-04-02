@@ -39,7 +39,7 @@ class calcIG(mathUtils):
     """
 
     def __init__(self, filter_dict, sed_list, y_probs, y_vals,
-                 n_pts=250000,
+                 n_pts=500000,
                  sky_mag=20.47, ref_filter=None, phot_params=None,
                  fwhm_eff=0.8):
 
@@ -131,20 +131,6 @@ class calcIG(mathUtils):
 
         return np.array(sed_colors), np.array(color_errors)
 
-    def nearest_neighbors_density(self, x, radius, normalize=True):
-
-        x = np.asarray(x)
-
-        bt = BallTree(x)
-
-        counts = bt.query_radius(x, radius, count_only=True)
-        counts = counts.astype(float)
-
-        if normalize:
-            counts /= x.shape[0] * (radius ** x.shape[1])
-
-        return counts.astype(float)
-
     def knn_density(self, x, n_neighbors):
 
         x = np.asarray(x)
@@ -158,16 +144,6 @@ class calcIG(mathUtils):
         dist = dist.astype(float)
 
         return dist
-
-    def kernel_estimate_density(self, x, h):
-
-        x = np.asarray(x)
-
-        kde = KernelDensity(kernel='epanechnikov', bandwidth=h, rtol=1e-4).fit(x)
-
-        dens_est = kde.score_samples(x)
-
-        return dens_est.astype(float)
 
     def calc_gain(self, rand_state=None):
 
@@ -273,6 +249,6 @@ class calcIG(mathUtils):
 
         info_gain, h_y = self.calc_gain(rand_state)
 
-        print(info_gain, h_y)
+        # print(info_gain, h_y)
 
         return info_gain

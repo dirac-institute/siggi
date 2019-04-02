@@ -1,4 +1,6 @@
 import os
+import sys
+sys.path.append('..')
 import unittest
 import pickle
 from siggi import siggi, filters, spectra
@@ -37,7 +39,7 @@ class testSiggi(unittest.TestCase):
 
         sig_example = siggi([self.red_spec, self.blue_spec],
                             [0.5, 0.5], prior_z,
-                            z_min=0.1, z_max=1.0, z_steps=20)
+                            z_min=0.0, z_max=1.0, z_steps=21)
 
         random_state = np.random.RandomState(23)
         num_filters = 2
@@ -71,8 +73,8 @@ class testSiggi(unittest.TestCase):
         np.testing.assert_array_equal(t_1.Xi, t_2.Xi)
         np.testing.assert_array_equal(t_1.yi, t_2.yi)
         np.testing.assert_almost_equal(np.max(np.abs(t_1.yi[:10])),
-                                       2.264284279753457)
-        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 2.264284279753457)
+                                       1.57182710521979)
+        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 1.57182710521979)
 
         # Test pickling of optimization can replicate results
 

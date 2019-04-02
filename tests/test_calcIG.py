@@ -1,6 +1,4 @@
 import unittest
-# import sys
-# sys.path.append('..')
 import numpy as np
 from scipy.stats import norm, entropy, multivariate_normal
 from siggi import filters, spectra, calcIG
