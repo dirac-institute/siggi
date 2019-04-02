@@ -1,12 +1,15 @@
 from __future__ import division
 
 import numpy as np
+from scipy import interpolate
 from scipy.spatial.distance import cdist
 from scipy import stats
 from .mathUtils import mathUtils
 from . import Sed, Bandpass, BandpassDict, spectra
 from .lsst_utils import calcMagError_sed, calcSNR_sed
 from .lsst_utils import PhotometricParameters
+from copy import deepcopy
+from sklearn.neighbors import BallTree, KernelDensity, NearestNeighbors
 
 __all__ = ["calcIG"]
 
@@ -35,25 +38,17 @@ class calcIG(mathUtils):
         in the same order as sed_list
     """
 
-    def __init__(self, filter_dict, sed_list, sed_probs,
+    def __init__(self, filter_dict, sed_list, y_probs, y_vals,
+                 n_pts=500000,
                  sky_mag=20.47, ref_filter=None, phot_params=None,
-                 fwhm_eff=1.0):
-
-        self._sed_list = []
+                 fwhm_eff=0.8):
 
         if ref_filter is None:
             ref_filter = Bandpass()
             ref_filter.imsimBandpass()
 
-        for sed_obj in sed_list:
-
-            sed_copy = Sed()
-            sed_copy.setSED(wavelen=sed_obj.wavelen,
-                            flambda=sed_obj.flambda)
-            sed_copy.resampleSED(wavelen_match=filter_dict.values()[0].wavelen)
-            sed_copy.flambda[np.where(np.isnan(sed_copy.flambda))] = 0.
-
-            self._sed_list.append(sed_copy)
+        self.sed_list = sed_list
+        self.n_pts = n_pts
 
         self._hardware_filt_dict, self._total_filt_dict = \
             BandpassDict.addSystemBandpass(filter_dict)
@@ -71,12 +66,17 @@ class calcIG(mathUtils):
         else:
             self.phot_params = phot_params
 
-        self.sed_probs = np.array(sed_probs)/np.sum(sed_probs)
+        self.y_probs = y_probs
+        self.y_vals = y_vals
         self.fwhm_eff = fwhm_eff
+
+        self.n_colors = len(self._total_filt_dict.keys()) - 1
+        self.n_seds = len(sed_list[0])
+        self.y_steps = len(y_vals) - 1
 
         return
 
-    def calc_colors(self, return_all=False):
+    def calc_colors(self, sed_list, return_all=False):
 
         """
         Calculate the colors and errors in color measurement
@@ -90,7 +90,9 @@ class calcIG(mathUtils):
 
         sky_mags = self._total_filt_dict.magListForSed(self.sky_spec)
 
-        for sed_obj in self._sed_list:
+        for sed_item in sed_list:
+
+            sed_obj = deepcopy(sed_item)
 
             sed_mags = self._total_filt_dict.magListForSed(sed_obj)
 
@@ -129,77 +131,91 @@ class calcIG(mathUtils):
 
         return np.array(sed_colors), np.array(color_errors)
 
-    def calc_hyx(self, colors, errors, rand_state=None):
+    def calc_gain(self, rand_state=None):
 
         """
-        Calculate the conditional entropy.
+        Calculate the information gain.
         """
 
         if rand_state is None:
             rand_state = np.random.RandomState()
 
-        sed_probs = self.sed_probs
+        # Set up draws of the prior distribution
+        y_probs = deepcopy(self.y_probs)
+        # Make sure probability function starts at (0., 0.)
+        if y_probs[0] != 0.:
+            raise ValueError('Make sure probability function' +
+                             ' starts at (0., 0.)')
 
-        hyx_sum = 0
+        y_probs /= np.sum(y_probs)
+        y_cum = y_probs.cumsum()
+        n_pts = self.n_pts
 
-        num_seds, num_colors = np.shape(colors)
+        if len(self.y_vals) >= 10:
+            fy = interpolate.splrep(y_cum, self.y_vals)
+        else:
+            fy = interpolate.splrep(y_cum, self.y_vals,
+                                    k=1)
+        samp_y = rand_state.uniform(size=n_pts)
+        fy_samp = interpolate.splev(samp_y, fy)
 
-        rv = rand_state.multivariate_normal
+        # Assign to redshift bin
+        i_sort = fy_samp.argsort()
+        fy_sorted = fy_samp[i_sort]
 
-        y_vals = []
-        y_distances = []
-        num_points = 25000
-        x_total = np.zeros((num_seds*num_points, num_colors))
+        # Find indices of z bins
+        y_bin_idx = fy_sorted.searchsorted(self.y_vals)
+        bin_counts = np.diff(y_bin_idx)
 
-        for idx in range(num_seds):
+        # Calc Total Entropy
+        py = bin_counts / n_pts
+        hy = self.calc_h(py)
 
-            y_samples = rv(mean=colors[idx],
-                           cov=np.diagflat(errors[idx]**2.),
-                           size=num_points)
+        # Calc Color distributions
+        colors = []
+        errors = []
+        for bin_idx in range(self.y_steps):
+            bin_colors, bin_errors = self.calc_colors(self.sed_list[bin_idx])
+            colors.append(bin_colors)
+            errors.append(bin_errors)
 
-            y_samples = y_samples.reshape(num_points, num_colors)
+        # Store distributions as functions
+        color_funcs = []
+        for y_idx in range(self.y_steps):
+            color_funcs.append([])
+            for sed_num in range(self.n_seds):
+                color_funcs[-1].append(
+                    stats.multivariate_normal(mean=colors[y_idx][sed_num],
+                                              cov=np.diag(errors[y_idx][sed_num])**2.))
 
-            inv_cov = np.linalg.inv(np.diagflat(errors[idx]**2.))
+        # Draw samples from color distributions
+        x_sample = np.zeros((n_pts, self.n_colors))
 
-            y_dist = cdist(y_samples, [colors[idx]], metric='mahalanobis',
-                           VI=inv_cov).flatten()
-            y_sort = np.argsort(y_dist)
-            y_dist = y_dist[y_sort]
-            y_samples = y_samples[y_sort]
+        x_idx = 0
+        for idx in range(self.y_steps):
+            func_choose = rand_state.randint(self.n_seds, size=bin_counts[idx])
+            func_count = np.bincount(func_choose)
+            for func_num in range(len(func_count)):
+                slc = slice(x_idx, x_idx + func_count[func_num])
+                func_x_samp = color_funcs[idx][func_num].rvs(size=func_count[func_num],
+                                                             random_state=rand_state)
+                x_sample[slc] = func_x_samp.reshape(func_count[func_num], self.n_colors)
+                x_idx += func_count[func_num]
 
-            x_total[idx*num_points:(idx+1)*num_points] = \
-                y_samples
+        pxy = np.zeros(n_pts)
+        px = np.zeros(n_pts)
+        x_idx = 0
+        for idx in range(self.y_steps):
+            slc = slice(x_idx, x_idx + bin_counts[idx])
+            for func_num in range(self.n_seds):
+                func_px_samp = color_funcs[idx][func_num].pdf(x_sample)
+                pxy[slc] += func_px_samp[slc] * (1/(self.n_seds)) * (bin_counts[idx]/n_pts)
+                px += func_px_samp * (1/self.n_seds) * (bin_counts[idx]/(n_pts))
+            x_idx += bin_counts[idx]
 
-            y_vals.append(y_samples)
-            y_distances.append(y_dist)
+        hyx = -(1./n_pts) * np.log2(pxy / px).sum()
 
-        y_vals = np.array(y_vals)
-
-        x_dens = np.zeros(len(x_total))
-
-        for idx in range(num_seds):
-            pdf_dist = stats.multivariate_normal
-            y_dens = sed_probs[idx] * \
-                pdf_dist.pdf(x_total, mean=colors[idx],
-                             cov=np.diagflat(errors[idx])**2.)
-            x_dens += y_dens
-
-        for idx in range(num_seds):
-
-            y_samp = x_total[idx*num_points:(idx+1)*num_points]
-            y_dens = sed_probs[idx] * \
-                pdf_dist.pdf(y_samp, mean=colors[idx],
-                             cov=np.diagflat(errors[idx])**2.)
-
-            norm_factor = self.calc_integral_scaling(y_distances[idx],
-                                                     num_colors, errors[idx])
-
-            hyx_i = np.nansum(norm_factor * (y_dens * np.log2(y_dens /
-                                             x_dens[idx*num_points:(idx+1) *
-                                                    num_points])))
-            hyx_sum += hyx_i
-
-        return -1.*hyx_sum
+        return hy - hyx, hy
 
     def calc_IG(self, rand_state=None):
 
@@ -208,10 +224,8 @@ class calcIG(mathUtils):
         to get information gain.
         """
 
-        colors, errors = self.calc_colors()
-        hy_sum = self.calc_h(self.sed_probs)
-        hyx_sum = self.calc_hyx(colors, errors, rand_state)
+        info_gain, h_y = self.calc_gain(rand_state)
 
-        info_gain = hy_sum - hyx_sum
+        # print(info_gain, h_y)
 
         return info_gain

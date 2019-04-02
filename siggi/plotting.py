@@ -165,15 +165,22 @@ class plotting(_siggiBase):
             fig = plt.figure(figsize=(12, 6))
 
         shift_seds = []
+        shift_values = []
 
-        for sed_obj in self.sed_list:
-            for z_val in redshift_list:
+        for idx, z_val in list(enumerate(redshift_list)):
+            sed_copies = []
+            for sed_obj in self.sed_list:
                 sed_copy = deepcopy(sed_obj)
-                f_norm = sed_copy.calcFluxNorm(self.sed_mags, 
+                f_norm = sed_copy.calcFluxNorm(self.sed_mags,
                                                self.calib_filter)
                 sed_copy.multiplyFluxNorm(f_norm)
                 sed_copy.redshiftSED(z_val, dimming=True)
-                shift_seds.append(sed_copy)
+                sed_copies.append(sed_copy)
+                shift_values.append(idx)
+            shift_seds.append(sed_copies)
+
+        filler_probs = np.ones(len(shift_seds))
+        filler_probs[0] = 0.
 
         color_x_dict = BandpassDict([self.filter_dict[filt] for filt
                                      in filter_names[:2]], filter_names[:2])
@@ -181,24 +188,41 @@ class plotting(_siggiBase):
                                      in filter_names[2:]], filter_names[2:])
 
         calc_ig = calcIG(color_x_dict, shift_seds,
-                         np.ones(len(shift_seds)),
+                         filler_probs, np.ones(len(shift_seds)),
                          sky_mag=self.sky_mag)
-        col_x, err_x = calc_ig.calc_colors()
+
+        col_x = []
+        err_x = []
+        for z_seds in shift_seds:
+            cx, ex = calc_ig.calc_colors(z_seds)
+            col_x.append(cx)
+            err_x.append(ex)
+        col_x = np.array(col_x).reshape(len(shift_values))
+        err_x = np.array(err_x).reshape(len(shift_values))
 
         calc_ig = calcIG(color_y_dict, shift_seds,
-                         np.ones(len(shift_seds)),
+                         filler_probs, np.ones(len(shift_seds)),
                          sky_mag=self.sky_mag)
-        col_y, err_y = calc_ig.calc_colors()
+
+        col_y = []
+        err_y = []
+        for z_seds in shift_seds:
+            cy, ey = calc_ig.calc_colors(z_seds)
+            col_y.append(cy)
+            err_y.append(ey)
+        col_y = np.array(col_y).reshape(len(shift_values))
+        err_y = np.array(err_y).reshape(len(shift_values))
 
         num_z = len(redshift_list)
 
         for sed_num in range(len(self.sed_list)):
 
-            start_idx = sed_num*num_z
-            end_idx = start_idx + num_z
+            start_idx = sed_num
+            end_idx = len(shift_seds)*len(self.sed_list)
+            slc = slice(start_idx, end_idx, len(self.sed_list))
 
-            self.colorline(col_x[start_idx:end_idx],
-                           col_y[start_idx:end_idx],
+            self.colorline(col_x[slc],
+                           col_y[slc],
                            cmap=cmap)
 
         plt.xlabel('%s - %s' % (filter_names[0], filter_names[1]))
@@ -291,23 +315,37 @@ class plotting(_siggiBase):
         shift_seds = []
         shift_values = []
 
-        for sed_obj in self.sed_list:
-            for idx, z_val in list(enumerate(redshift_list)):
+        for idx, z_val in list(enumerate(redshift_list)):
+            sed_copies = []
+            for sed_obj in self.sed_list:
                 sed_copy = deepcopy(sed_obj)
-                f_norm = sed_copy.calcFluxNorm(self.sed_mags, 
+                f_norm = sed_copy.calcFluxNorm(self.sed_mags,
                                                self.calib_filter)
                 sed_copy.multiplyFluxNorm(f_norm)
                 sed_copy.redshiftSED(z_val, dimming=True)
-                shift_seds.append(sed_copy)
+                sed_copies.append(sed_copy)
                 shift_values.append(idx)
+            shift_seds.append(sed_copies)
 
         color_x_dict = BandpassDict([self.filter_dict[filt] for filt
                                      in filter_names], filter_names)
+        filler_probs = np.ones(len(shift_seds))
+        filler_probs[0] = 0.
 
         calc_ig = calcIG(color_x_dict, shift_seds,
-                         np.ones(len(shift_seds)),
+                         filler_probs, shift_values,
                          sky_mag=self.sky_mag)
-        col_x, err_x = calc_ig.calc_colors()
+
+        col_x = []
+        err_x = []
+        for z_seds in shift_seds:
+            cx, ex = calc_ig.calc_colors(z_seds)
+            col_x.append(cx)
+            err_x.append(ex)
+        col_x = np.array(col_x).reshape((len(shift_values),
+                                         len(filter_names)-1))
+        err_x = np.array(err_x).reshape((len(shift_values),
+                                         len(filter_names)-1))
 
         num_z = len(redshift_list)
 

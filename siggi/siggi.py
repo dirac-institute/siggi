@@ -61,10 +61,11 @@ class siggi(_siggiBase):
     """
 
     def __init__(self, spec_list, spec_weights, z_prior,
-                 z_min=0.05, z_max=2.5, z_steps=50,
+                 z_min=0.00, z_max=2.5, z_steps=51,
                  calib_filter=None, calib_mag=25.,
                  phot_params=None):
 
+        self.num_sed_types = len(spec_list)
         self.shift_seds = []
         self.z_probs = []
 
@@ -79,14 +80,20 @@ class siggi(_siggiBase):
         else:
             self.calib_filter = calib_filter
 
-        for spec, weight in zip(spec_list, spec_weights):
-            for z_val in np.linspace(z_min, z_max, z_steps):
+        z_vals = np.linspace(z_min, z_max, z_steps)
+
+        self.z_probs = z_prior(z_vals)
+        self.z_vals = z_vals
+
+        for z_val in z_vals:
+            z_specs = []
+            for spec in spec_list:
                 spec_copy = deepcopy(spec)
                 spec_copy.redshiftSED(z_val)
                 f_norm = spec_copy.calcFluxNorm(calib_mag, self.calib_filter)
                 spec_copy.multiplyFluxNorm(f_norm)
-                self.shift_seds.append(spec_copy)
-                self.z_probs.append(z_prior(z_val)*weight)
+                z_specs.append(spec_copy)
+            self.shift_seds.append(z_specs)
 
         self.phot_params = phot_params
 
@@ -402,11 +409,12 @@ class siggi(_siggiBase):
             return 0
 
         c = calcIG(filt_dict, self.shift_seds, self.z_probs,
+                   self.z_vals,
                    sky_mag=self.sky_mag,
                    ref_filter=self.calib_filter,
                    phot_params=self.phot_params)
-        step_result = c.calc_IG(rand_state=np.random.RandomState(
-                        np.int(np.sum(filt_params))))
+        step_result = c.calc_IG(rand_state=np.random.RandomState(1344))
+                        #np.int(np.sum(filt_params))))
         if self.verbosity >= 10:
             print(filt_params, step_result)
 
