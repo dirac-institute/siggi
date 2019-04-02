@@ -131,20 +131,6 @@ class calcIG(mathUtils):
 
         return np.array(sed_colors), np.array(color_errors)
 
-    def knn_density(self, x, n_neighbors):
-
-        x = np.asarray(x)
-
-        if n_neighbors > len(x)*.9:
-            n_neighbors = int(len(x)*.9)
-
-        bt = NearestNeighbors(n_neighbors=n_neighbors).fit(x)
-
-        dist, indices = bt.kneighbors()
-        dist = dist.astype(float)
-
-        return dist
-
     def calc_gain(self, rand_state=None):
 
         """
@@ -165,11 +151,11 @@ class calcIG(mathUtils):
         y_cum = y_probs.cumsum()
         n_pts = self.n_pts
 
-        if len(self.y_vals) > 3:
+        if len(self.y_vals) >= 10:
             fy = interpolate.splrep(y_cum, self.y_vals)
         else:
             fy = interpolate.splrep(y_cum, self.y_vals,
-                                    k=len(self.y_vals)-1)
+                                    k=1)
         samp_y = rand_state.uniform(size=n_pts)
         fy_samp = interpolate.splev(samp_y, fy)
 
@@ -204,8 +190,6 @@ class calcIG(mathUtils):
 
         # Draw samples from color distributions
         x_sample = np.zeros((n_pts, self.n_colors))
-        dx_sample = np.zeros((n_pts))
-
 
         x_idx = 0
         for idx in range(self.y_steps):
@@ -216,7 +200,6 @@ class calcIG(mathUtils):
                 func_x_samp = color_funcs[idx][func_num].rvs(size=func_count[func_num],
                                                              random_state=rand_state)
                 x_sample[slc] = func_x_samp.reshape(func_count[func_num], self.n_colors)
-                dx_sample[slc] = np.linalg.norm(errors[idx][func_num])
                 x_idx += func_count[func_num]
 
         pxy = np.zeros(n_pts)
@@ -224,21 +207,15 @@ class calcIG(mathUtils):
         x_idx = 0
         for idx in range(self.y_steps):
             slc = slice(x_idx, x_idx + bin_counts[idx])
-            for func_num in range(len(func_count)):
+            for func_num in range(self.n_seds):
                 func_px_samp = color_funcs[idx][func_num].pdf(x_sample)
-                pxy[slc] += func_px_samp[slc] * (1/(self.n_seds))
-                px += func_px_samp * (1./(self.n_seds))
+                pxy[slc] += func_px_samp[slc] * (1/(self.n_seds)) * (bin_counts[idx]/n_pts)
+                px += func_px_samp * (1/self.n_seds) * (bin_counts[idx]/(n_pts))
             x_idx += bin_counts[idx]
 
-        # print(pxy)
-        # print(px)
-        # # print(dx_sample)
-        # print(px.sum())
+        hyx = -(1./n_pts) * np.log2(pxy / px).sum()
 
-        ig = (1./n_pts) * np.log2(pxy / px).sum()
-        # ig = (1./n_pts) * np.log2((px) / pxy).sum()
-
-        return hy + ig, hy
+        return hy - hyx, hy
 
     def calc_IG(self, rand_state=None):
 
