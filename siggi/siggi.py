@@ -62,7 +62,7 @@ class siggi(_siggiBase):
 
     def __init__(self, spec_list, spec_weights, z_prior,
                  z_min=0.00, z_max=2.5, z_steps=51,
-                 calib_filter=None, calib_mag=25.,
+                 calib_filter=None, calib_mag=25.3,
                  phot_params=None):
 
         self.num_sed_types = len(spec_list)
