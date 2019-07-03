@@ -43,7 +43,7 @@ class plotting(_siggiBase):
             BandpassDict.addSystemBandpass(trap_dict)
 
         if frozen_filt_dict is None:
-            self.filter_dict = total_filt_dict
+            self.filter_dict = hardware_filt_dict#total_filt_dict
         else:
             if (type(frozen_filt_eff_wavelen) != list):
                 raise ValueError("If including frozen filters, " +
@@ -51,9 +51,9 @@ class plotting(_siggiBase):
             filter_wavelengths = frozen_filt_eff_wavelen +\
                 self.find_filt_centers(filter_info)
             filter_names_unsort = frozen_filt_dict.keys() +\
-                total_filt_dict.keys()
+                hardware_filt_dict.keys()
             filter_list_unsort = frozen_filt_dict.values() +\
-                total_filt_dict.values()
+                hardware_filt_dict.values()
             sort_idx = np.argsort(filter_wavelengths)
             filter_names = [filter_names_unsort[idx] for idx in sort_idx]
             filter_list = [filter_list_unsort[idx] for idx in sort_idx]
@@ -295,7 +295,7 @@ class plotting(_siggiBase):
 
         extent = [np.min(xi), np.max(xi), np.min(yi), np.max(yi)]
         plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower',
-                   extent=extent, interpolation='bicubic')
+                   extent=extent, interpolation='bicubic', vmax=1.)
 
         if return_centers is True:
             return xi, yi
