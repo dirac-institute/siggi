@@ -71,8 +71,8 @@ class testSiggi(unittest.TestCase):
         np.testing.assert_array_equal(t_1.Xi, t_2.Xi)
         np.testing.assert_array_equal(t_1.yi, t_2.yi)
         np.testing.assert_almost_equal(np.max(np.abs(t_1.yi[:10])),
-                                       1.63715332)
-        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 1.63715332)
+                                       1.2962127)
+        self.assertGreaterEqual(np.max(np.abs(t_1.yi)), 1.2962127)
 
         # Test pickling of optimization can replicate results
 
