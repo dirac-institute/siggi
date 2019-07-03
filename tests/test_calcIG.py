@@ -1,4 +1,5 @@
 import unittest
+import os
 import numpy as np
 from scipy.stats import norm, entropy, multivariate_normal
 from siggi import filters, spectra, calcIG
@@ -25,6 +26,12 @@ class testCalcIG(unittest.TestCase):
 
         cls.imsimBand = Bandpass()
         cls.imsimBand.imsimBandpass()
+
+        cls.frozen_dict = BandpassDict.loadTotalBandpassesFromFiles(
+                        bandpassNames=['i'],
+                        bandpassDir=os.path.join(os.path.dirname(__file__),
+                                                 '../siggi/data',
+                                                 'lsst_baseline_throughputs'))
 
         phot_params = {}
         for idx in range(6):
@@ -65,7 +72,7 @@ class testCalcIG(unittest.TestCase):
 
         np.testing.assert_equal(colors, np.zeros(np.shape(colors)))
 
-        sky_fn = self.sky_spec.calcFluxNorm(21.2, self.imsimBand)
+        sky_fn = self.sky_spec.calcFluxNorm(21.2, self.frozen_dict['i'])
         self.sky_spec.multiplyFluxNorm(sky_fn)
 
         test_error = calcMagError_sed(test_c.sed_list[0][0],

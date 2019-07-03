@@ -1,5 +1,6 @@
 from __future__ import division
 
+import os
 import numpy as np
 from scipy import interpolate
 from scipy.spatial.distance import cdist
@@ -39,13 +40,18 @@ class calcIG(mathUtils):
     """
 
     def __init__(self, filter_dict, sed_list, y_probs, y_vals,
-                 n_pts=500000,
+                 n_pts=1000000,
                  sky_mag=20.47, ref_filter=None, phot_params=None,
                  fwhm_eff=0.8):
 
+        bp_dict_folder = os.path.join(os.path.dirname(__file__),
+                                      'data',
+                                      'lsst_baseline_throughputs')
+        bp_dict = BandpassDict.loadTotalBandpassesFromFiles(
+            bandpassDir=bp_dict_folder)
+
         if ref_filter is None:
-            ref_filter = Bandpass()
-            ref_filter.imsimBandpass()
+            ref_filter = bp_dict['i']
 
         self.sed_list = sed_list
         self.n_pts = n_pts

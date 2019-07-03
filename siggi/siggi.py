@@ -62,7 +62,7 @@ class siggi(_siggiBase):
 
     def __init__(self, spec_list, spec_weights, z_prior,
                  z_min=0.00, z_max=2.5, z_steps=51,
-                 calib_filter=None, calib_mag=25.,
+                 calib_filter=None, calib_mag=25.3,
                  phot_params=None):
 
         self.num_sed_types = len(spec_list)
@@ -104,6 +104,7 @@ class siggi(_siggiBase):
                          set_ratio=None,
                          width_min=30., width_max=120.,
                          starting_points=None,
+                         starting_vals=None,
                          system_wavelen_min=300., system_wavelen_max=1150.,
                          system_wavelen_step=0.1,
                          procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
@@ -286,6 +287,21 @@ class siggi(_siggiBase):
                             acq_optimizer_kwargs=acq_opt_kwargs_dict)
         else:
             opt = load_optimizer
+
+        if starting_vals is not None:
+
+            len_y0 = len(starting_vals)
+            x_submit = []
+            for x_sample in x1[:len_y0]:
+                x_submit.append(list(x_sample))
+            opt.tell(x_submit, list(starting_vals))
+
+            if len_y0 < len(x1):
+                x0 = [list(x_on) for x_on in x1[len_y0:]]
+            else:
+                x0 = [list(x_on) for x_on in x0[len_y0:]]
+
+        print(x0)
 
         with Parallel(n_jobs=procs, batch_size=1, backend=parallel_backend,
                       verbose=self.verbosity) as parallel:
