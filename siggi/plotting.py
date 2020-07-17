@@ -38,7 +38,7 @@ class plotting(_siggiBase):
                 for i in range(int(len(best_point))):
                     edges = np.array(best_point[i:(i+1)])
                     bottom_len = set_width
-                    top_len = ratio*bottom_len
+                    top_len = set_ratio*bottom_len
                     center = edges[0] + bottom_len/2.
                     top_left = center - top_len/2.
                     top_right = center + top_len/2.
