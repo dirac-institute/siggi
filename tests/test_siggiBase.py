@@ -45,6 +45,10 @@ class testSiggi(unittest.TestCase):
 
         test_sb = _siggiBase()
 
+        # Test that width cannot be set without ratio
+        self.assertRaises(AssertionError, test_sb.set_starting_points,
+                          [[400., 500.]], 2, 400., 700., width=10)
+
         test_start_0 = test_sb.set_starting_points(None, 2, 400., 700.)[1]
 
         self.assertEqual(len(test_start_0), 10)
@@ -86,19 +90,42 @@ class testSiggi(unittest.TestCase):
         self.assertListEqual(test_start_2[3], [550., 625.,
                                                625., 700.])
 
+        test_start_3 = test_sb.set_starting_points([[450., 525.]],
+                                                   2, 400., 700., ratio=1.0, width=100)[1]
+
+        self.assertEqual(len(test_start_3), 10)
+        self.assertListEqual(test_start_3[0], [450., 525.])
+        self.assertListEqual(test_start_3[1], [400., 600.])
+        self.assertListEqual(test_start_3[2], [500., 600.])
+        self.assertListEqual(test_start_3[3], [600., 600.])
+
         return
 
     def test_validate_filter_input(self):
 
         test_sb = _siggiBase()
 
+        # Test AssertionError raised with wrong number of filt edges
         self.assertRaises(AssertionError,
                           test_sb.validate_filter_input,
                           [200.]*4, 200., 200., 2)
 
+        # Test AssertionError raised with wrong number of filt edges
         self.assertRaises(AssertionError,
                           test_sb.validate_filter_input,
                           [200.]*8, 200., 200., 2, 0.5)
+
+        # Test AssertionError raised with wrong number of filt edges
+        self.assertRaises(AssertionError,
+                          test_sb.validate_filter_input,
+                          [301., 302.], 300., 302., 1, ratio=0.5,
+                          width=1.)
+
+        # Test AssertionError raised with width unable to fit with filter bounds
+        self.assertRaises(AssertionError,
+                          test_sb.validate_filter_input,
+                          [301.], 300., 302., 1, ratio=0.5,
+                          width=10.)
 
         # Test that higher center filter is not to left of lower
         test_input_0 = test_sb.validate_filter_input([400., 401., 402., 403.,
@@ -108,7 +135,7 @@ class testSiggi(unittest.TestCase):
 
         test_input_0_ratio = test_sb.validate_filter_input([400., 403., 300.,
                                                             303.],
-                                                           300., 600., 2, 0.5)
+                                                           300., 600., 2, ratio=0.5)
 
         self.assertFalse(test_input_0_ratio)
 
@@ -120,7 +147,7 @@ class testSiggi(unittest.TestCase):
 
         test_input_1_ratio = test_sb.validate_filter_input([300., 303.,
                                                             400., 403.],
-                                                           300., 403., 2, 0.5)
+                                                           300., 403., 2, ratio=0.5)
         self.assertTrue(test_input_1_ratio)
 
         # Test that filter cannot be less than min allowed wavelength
@@ -131,7 +158,7 @@ class testSiggi(unittest.TestCase):
 
         test_input_2_ratio = test_sb.validate_filter_input([300., 303.,
                                                             400., 403.],
-                                                           301., 600., 2, 0.5)
+                                                           301., 600., 2, ratio=0.5)
         self.assertFalse(test_input_2_ratio)
 
         # Test that filter cannot be more than max allowed wavelength
@@ -142,7 +169,7 @@ class testSiggi(unittest.TestCase):
 
         test_input_3_ratio = test_sb.validate_filter_input([300., 303.,
                                                             400., 403.],
-                                                           300., 402., 2, 0.5)
+                                                           300., 402., 2, ratio=0.5)
         self.assertFalse(test_input_3_ratio)
 
         # Test that a single filter will properly be tested
@@ -153,7 +180,7 @@ class testSiggi(unittest.TestCase):
         self.assertTrue(test_input_4)
 
         test_input_4_ratio = test_sb.validate_filter_input([300., 303.],
-                                                           300., 600., 1, 0.5)
+                                                           300., 600., 1, ratio=0.5)
 
         self.assertTrue(test_input_4_ratio)
 
@@ -163,7 +190,7 @@ class testSiggi(unittest.TestCase):
         self.assertFalse(test_input_5)
 
         test_input_5_ratio = test_sb.validate_filter_input([300., 303.],
-                                                           301., 600., 1, 0.5)
+                                                           301., 600., 1, ratio=0.5)
 
         self.assertFalse(test_input_5_ratio)
 
@@ -173,7 +200,7 @@ class testSiggi(unittest.TestCase):
         self.assertFalse(test_input_6)
 
         test_input_6_ratio = test_sb.validate_filter_input([300., 303.],
-                                                           300., 302., 1, 0.5)
+                                                           300., 302., 1, ratio=0.5)
 
         self.assertFalse(test_input_6_ratio)
 
@@ -184,7 +211,7 @@ class testSiggi(unittest.TestCase):
         self.assertFalse(test_input_7)
 
         test_input_7_ratio = test_sb.validate_filter_input([301., 300.95],
-                                                           300., 302., 1, 0.5)
+                                                           300., 302., 1, ratio=0.5)
 
         self.assertFalse(test_input_7_ratio)
 
@@ -202,7 +229,7 @@ class testSiggi(unittest.TestCase):
         test_input_8_ratio = test_sb.validate_filter_input([301.,
                                                             301. +
                                                             2*wave_step],
-                                                           300., 302., 1, 0.5)
+                                                           300., 302., 1, ratio=0.5)
 
         self.assertFalse(test_input_8_ratio)
 
@@ -228,8 +255,8 @@ class testSiggi(unittest.TestCase):
                                                              301.3,
                                                              301.3,
                                                              301.9],
-                                                            300., 302., 2, 0.5,
-                                                            wave_step)
+                                                            300., 302., 2, ratio=0.5,
+                                                            wavelen_step=wave_step)
 
         self.assertTrue(test_input_10_ratio)
 
@@ -248,10 +275,28 @@ class testSiggi(unittest.TestCase):
         test_input_11_ratio = test_sb.validate_filter_input([301.,
                                                              301. + wave_step /
                                                              2.],
-                                                            300., 302., 1, 0.5,
-                                                            wave_step)
+                                                            300., 302., 1, ratio=0.5,
+                                                            wavelen_step=wave_step)
 
         self.assertFalse(test_input_11_ratio)
+
+        # Test giving set width
+
+        width = 10
+
+        test_input_12_ratio = test_sb.validate_filter_input([301.],
+                                                            300., 312., 1, ratio=0.5,
+                                                            width=width)
+
+        self.assertTrue(test_input_12_ratio)
+
+        # Now should fail if the left edge is too great to fit in filt_max
+
+        test_input_13_ratio = test_sb.validate_filter_input([305.],
+                                                            300., 312., 1, ratio=0.5,
+                                                            width=width)
+
+        self.assertFalse(test_input_13_ratio)
 
 if __name__ == '__main__':
     unittest.main()

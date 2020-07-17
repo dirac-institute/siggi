@@ -147,6 +147,23 @@ class testSiggi(unittest.TestCase):
         np.testing.assert_array_equal(t_6.yi[:10], t_5.yi[:10])
         np.testing.assert_equal(len(t_5.yi), len(t_5.Xi))
 
+        t_7 = sig_example.optimize_filters(num_filters=num_filters,
+                                           filt_min=300., filt_max=1100.,
+                                           set_ratio=set_ratio,
+                                           set_width=100,
+                                           system_wavelen_max=1200.,
+                                           n_opt_points=14,
+                                           optimizer_verbosity=10,
+                                           procs=4,
+                                           acq_func_kwargs_dict={'kappa': 3},
+                                           frozen_filt_dict=self.frozen_dict,
+                                           frozen_filt_eff_wavelen=[365, 477],
+                                           starting_points=None,
+                                           rand_state=random_state)
+
+        self.assertGreater(len(t_7.Xi), 14)
+        # TODO: Add more tests here
+
     @classmethod
     def tearDownClass(cls):
 
