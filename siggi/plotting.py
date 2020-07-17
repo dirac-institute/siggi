@@ -42,7 +42,7 @@ class plotting(_siggiBase):
                     center = edges[0] + bottom_len/2.
                     top_left = center - top_len/2.
                     top_right = center + top_len/2.
-                    filt_input.append([edges[0], top_left, top_right, edges[0]+width])
+                    filter_info.append([edges[0], top_left, top_right, edges[0]+width])
         else:
             filter_info = [best_point[4*i:4*(i+1)]
                            for i in range(int(len(best_point)/4))]
