@@ -6,8 +6,10 @@ from scipy import stats
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import tri
+from matplotlib.patches import Ellipse
 from . import filters, calcIG, _siggiBase
 from .lsst_utils import BandpassDict
+
 
 __all__ = ["plotting"]
 
@@ -249,11 +251,15 @@ class plotting(_siggiBase):
         plt.colorbar(sm, label='Redshift')
 
         if include_err is True:
-            plt.errorbar(col_x, col_y, xerr=err_x, yerr=err_y,
-                         ms=2, alpha=0.5, ls=' ', zorder=0)
+            ax = plt.gca()
+            for x, y, w, h in zip(col_x, col_y, err_x, err_y):
+                ellipse = Ellipse(xy=(x, y), width=w, height=h, alpha = .4, fc = 'r')
+                ax.add_artist(ellipse)
 
         return fig
-
+    
+    
+    
     def plot_ig_space(self, test_pts, test_vals, filter_idx,
                       return_centers=False):
 
@@ -391,3 +397,5 @@ class plotting(_siggiBase):
             cbar.set_label('Galaxy Redshift')
 
         return fig
+    
+    
