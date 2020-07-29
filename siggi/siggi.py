@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 from skopt import Optimizer
 from skopt.space import Real
-from sklearn.externals.joblib import Parallel, delayed
+from joblib import Parallel, delayed
 from copy import deepcopy
 from . import filters, calcIG, _siggiBase
 from .lsst_utils import BandpassDict
@@ -311,8 +311,8 @@ class siggi(_siggiBase):
                 if ((i == 0) and (load_optimizer is None)):
                     x = x0
                 elif ((load_optimizer is not None) and
-                      (starting_points is not None) and (i==0)):
-                    x = x1 # Hack to avoid redoing the 3 base points
+                      (starting_points is not None) and (i == 0)):
+                    x = x1  # Hack to avoid redoing the 3 base points
                     print(x)
                 else:
                     x = []
@@ -397,7 +397,8 @@ class siggi(_siggiBase):
                     center = edges[0] + bottom_len/2.
                     top_left = center - top_len/2.
                     top_right = center + top_len/2.
-                    filt_input.append([edges[0], top_left, top_right, edges[1]])
+                    filt_input.append([edges[0], top_left,
+                                       top_right, edges[1]])
 
             else:
 
@@ -448,7 +449,7 @@ class siggi(_siggiBase):
                    ref_filter=self.calib_filter,
                    phot_params=self.phot_params)
         step_result = c.calc_IG(rand_state=np.random.RandomState(1344))
-                        #np.int(np.sum(filt_params))))
+
         if self.verbosity >= 10:
             print(filt_params, step_result)
 

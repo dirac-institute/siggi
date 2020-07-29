@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 from scipy import stats
 from matplotlib.collections import LineCollection
-from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import tri
 from matplotlib.patches import Ellipse
 from . import filters, calcIG, _siggiBase
@@ -23,31 +22,7 @@ class plotting(_siggiBase):
 
         f = filters()
 
-        if set_ratio is not None:
-
-            filter_info = []
-
-            if set_width is None:
-                for i in range(int(len(best_point)/2)):
-                    edges = np.array(best_point[2*i:2*(i+1)])
-                    bottom_len = edges[1] - edges[0]
-                    top_len = set_ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filter_info.append([edges[0], top_left, top_right, edges[1]])
-            else:
-                for i in range(int(len(best_point))):
-                    edges = np.array(best_point[i:(i+1)])
-                    bottom_len = set_width
-                    top_len = set_ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filter_info.append([edges[0], top_left, top_right, edges[0]+set_width])
-        else:
-            filter_info = [best_point[4*i:4*(i+1)]
-                           for i in range(int(len(best_point)/4))]
+        filter_info = self.get_filter_info(set_ratio, set_width, best_point)
 
         trap_dict = f.trap_filters(filter_info)
 
@@ -55,7 +30,7 @@ class plotting(_siggiBase):
             BandpassDict.addSystemBandpass(trap_dict)
 
         if frozen_filt_dict is None:
-            self.filter_dict = hardware_filt_dict#total_filt_dict
+            self.filter_dict = hardware_filt_dict
         else:
             if (type(frozen_filt_eff_wavelen) != list):
                 raise ValueError("If including frozen filters, " +
@@ -77,6 +52,7 @@ class plotting(_siggiBase):
         self.sky_mag = sky_mag
         self.sed_mags = sed_mags
         self.set_ratio = set_ratio
+        self.set_width = set_width
 
         bp_dict_folder = os.path.join(os.path.dirname(__file__),
                                       'data',
@@ -88,6 +64,39 @@ class plotting(_siggiBase):
             self.calib_filter = bp_dict['i']
         else:
             self.calib_filter = calib_filter
+
+    def get_filter_info(self, set_ratio, set_width, best_point):
+
+        if set_ratio is not None:
+
+            filter_info = []
+
+            if set_width is None:
+                for i in range(int(len(best_point)/2)):
+                    edges = np.array(best_point[2*i:2*(i+1)])
+                    bottom_len = edges[1] - edges[0]
+                    top_len = set_ratio*bottom_len
+                    center = edges[0] + bottom_len/2.
+                    top_left = center - top_len/2.
+                    top_right = center + top_len/2.
+                    filter_info.append([edges[0], top_left,
+                                        top_right, edges[1]])
+            else:
+                for i in range(int(len(best_point))):
+                    edges = np.array(best_point[i:(i+1)])
+                    bottom_len = set_width
+                    top_len = set_ratio*bottom_len
+                    center = edges[0] + bottom_len/2.
+                    top_left = center - top_len/2.
+                    top_right = center + top_len/2.
+                    filter_info.append([edges[0], top_left,
+                                        top_right,
+                                        edges[0]+set_width])
+        else:
+            filter_info = [best_point[4*i:4*(i+1)]
+                           for i in range(int(len(best_point)/4))]
+
+        return filter_info
 
     def plot_filters(self, fig=None):
 
@@ -166,7 +175,7 @@ class plotting(_siggiBase):
 
     def plot_color_color(self, filter_names, redshift_list,
                          cmap=plt.get_cmap('plasma'), fig=None,
-                         include_err=True):
+                         include_err=True, ellip_kwargs={}):
 
         """
         Plot the color-color tracks for each SED template as a function
@@ -195,9 +204,9 @@ class plotting(_siggiBase):
         filler_probs[0] = 0.
 
         color_x_dict = BandpassDict([self.filter_dict[filt] for filt
-                                     in filter_names[:2]], filter_names[:2])
+                                     in filter_names[0]], filter_names[0])
         color_y_dict = BandpassDict([self.filter_dict[filt] for filt
-                                     in filter_names[2:]], filter_names[2:])
+                                     in filter_names[1]], filter_names[1])
 
         calc_ig = calcIG(color_x_dict, shift_seds,
                          filler_probs, np.ones(len(shift_seds)),
@@ -225,8 +234,6 @@ class plotting(_siggiBase):
         col_y = np.array(col_y).reshape(len(shift_values))
         err_y = np.array(err_y).reshape(len(shift_values))
 
-        num_z = len(redshift_list)
-
         for sed_num in range(len(self.sed_list)):
 
             start_idx = sed_num
@@ -237,8 +244,8 @@ class plotting(_siggiBase):
                            col_y[slc],
                            cmap=cmap)
 
-        plt.xlabel('%s - %s' % (filter_names[0], filter_names[1]))
-        plt.ylabel('%s - %s' % (filter_names[2], filter_names[3]))
+        plt.xlabel('%s - %s' % (filter_names[0][0], filter_names[0][1]))
+        plt.ylabel('%s - %s' % (filter_names[1][0], filter_names[1][1]))
 
         plt.xlim(np.min(col_x) - 0.5, np.max(col_x) + 0.5)
         plt.ylim(np.min(col_y) - 0.5, np.max(col_y) + 0.5)
@@ -253,13 +260,12 @@ class plotting(_siggiBase):
         if include_err is True:
             ax = plt.gca()
             for x, y, w, h in zip(col_x, col_y, err_x, err_y):
-                ellipse = Ellipse(xy=(x, y), width=w, height=h, alpha = .4, fc = 'r')
+                ellipse = Ellipse(xy=(x, y), width=w, height=h,
+                                  **ellip_kwargs)
                 ax.add_artist(ellipse)
 
         return fig
-    
-    
-    
+
     def plot_ig_space(self, test_pts, test_vals, filter_idx,
                       return_centers=False):
 
@@ -267,28 +273,12 @@ class plotting(_siggiBase):
         Plot the information gain space by filter center position.
         """
 
-        f = filters()
-
         filt_centers = []
 
         for filter_set in test_pts:
 
-            if self.set_ratio is not None:
-
-                filter_info = []
-
-                for i in range(int(len(filter_set)/2)):
-                    edges = np.array(filter_set[2*i:2*(i+1)])
-                    bottom_len = edges[1] - edges[0]
-                    top_len = self.set_ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filter_info.append([edges[0], top_left,
-                                        top_right, edges[1]])
-            else:
-                filter_info = [filter_set[4*i:4*(i+1)]
-                               for i in range(int(len(filter_set)/4))]
+            filter_info = self.get_filter_info(self.set_ratio,
+                                               self.set_width, filter_set)
 
             filt_centers.append(self.find_filt_centers(filter_info))
 
@@ -363,8 +353,6 @@ class plotting(_siggiBase):
         err_x = np.array(err_x).reshape((len(shift_values),
                                          len(filter_names)-1))
 
-        num_z = len(redshift_list)
-
         cmap = plt.get_cmap('plasma')
 
         c_extent = np.linspace(0, 1, len(redshift_list))
@@ -397,5 +385,3 @@ class plotting(_siggiBase):
             cbar.set_label('Galaxy Redshift')
 
         return fig
-    
-    

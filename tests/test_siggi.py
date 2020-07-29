@@ -42,6 +42,7 @@ class testSiggi(unittest.TestCase):
         random_state = np.random.RandomState(23)
         num_filters = 2
         set_ratio = 1.0
+        set_width = 100
         t_1 = sig_example.optimize_filters(num_filters=num_filters,
                                            filt_min=300., filt_max=1100.,
                                            set_ratio=set_ratio,
@@ -109,7 +110,9 @@ class testSiggi(unittest.TestCase):
                                            rand_state=23)
 
         np.testing.assert_array_equal(t_1.Xi, t_4.Xi)
+        np.testing.assert_array_equal(t_3.Xi, t_4.Xi[:10])
         np.testing.assert_array_equal(t_1.yi, t_4.yi)
+        np.testing.assert_array_equal(t_3.yi, t_4.yi[:10])
 
         # Test random point assignment after timeout
 
@@ -147,10 +150,12 @@ class testSiggi(unittest.TestCase):
         np.testing.assert_array_equal(t_6.yi[:10], t_5.yi[:10])
         np.testing.assert_equal(len(t_5.yi), len(t_5.Xi))
 
+        # Tests for set_width
+
         t_7 = sig_example.optimize_filters(num_filters=num_filters,
                                            filt_min=300., filt_max=1100.,
                                            set_ratio=set_ratio,
-                                           set_width=100,
+                                           set_width=set_width,
                                            system_wavelen_max=1200.,
                                            n_opt_points=14,
                                            optimizer_verbosity=10,
@@ -161,8 +166,9 @@ class testSiggi(unittest.TestCase):
                                            starting_points=None,
                                            rand_state=random_state)
 
-        self.assertGreater(len(t_7.Xi), 14)
-        # TODO: Add more tests here
+        self.assertGreaterEqual(len(t_7.Xi), 14)
+        np.testing.assert_equal(np.shape(t_7.Xi)[1], num_filters)
+        np.testing.assert_equal(len(t_7.Xi), len(t_7.yi))
 
     @classmethod
     def tearDownClass(cls):

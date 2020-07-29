@@ -1,9 +1,4 @@
-import os
 import numpy as np
-from copy import deepcopy
-from functools import reduce
-from . import filters, spectra, calcIG
-from .lsst_utils import BandpassDict
 
 __all__ = ["_siggiBase"]
 
@@ -18,7 +13,8 @@ class _siggiBase(object):
                             ratio=None, width=None, rand_state=None):
 
         if width is not None:
-            assert (ratio != None), str("Ratio cannot be None when setting a width for now.")
+            assert (ratio is not None), \
+                str("Ratio cannot be None when setting a width for now.")
 
         if ((width is not None) and (width > (filt_max - filt_min))):
             raise ValueError('Width must not be greater than filter bounds.')
@@ -168,7 +164,8 @@ class _siggiBase(object):
                     center = edges[0] + bottom_len/2.
                     top_left = center - top_len/2.
                     top_right = center + top_len/2.
-                    filt_input.append([edges[0], top_left, top_right, edges[1]])
+                    filt_input.append([edges[0], top_left,
+                                       top_right, edges[1]])
 
             else:
                 for i in range(num_filters):
@@ -178,7 +175,8 @@ class _siggiBase(object):
                     center = edges[0] + bottom_len/2.
                     top_left = center - top_len/2.
                     top_right = center + top_len/2.
-                    filt_input.append([edges[0], top_left, top_right, edges[0]+width])
+                    filt_input.append([edges[0], top_left,
+                                       top_right, edges[0]+width])
         else:
             filt_input = [filt_edges[4*i:4*(i+1)]
                           for i in range(num_filters)]
