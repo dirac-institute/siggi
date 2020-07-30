@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 from skopt import Optimizer
 from skopt.space import Real
-from sklearn.externals.joblib import Parallel, delayed
+from joblib import Parallel, delayed
 from copy import deepcopy
 from . import filters, calcIG, _siggiBase
 from .lsst_utils import BandpassDict
@@ -102,7 +102,7 @@ class siggi(_siggiBase):
                          filter_type='trap', frozen_filt_dict=None,
                          frozen_filt_eff_wavelen=None,
                          set_ratio=None,
-                         width_min=30., width_max=120.,
+                         set_width=None,
                          starting_points=None,
                          starting_vals=None,
                          system_wavelen_min=300., system_wavelen_max=1150.,
@@ -255,6 +255,7 @@ class siggi(_siggiBase):
         self.num_filters = num_filters
         self.ratio = set_ratio
         self.sky_mag = sky_mag
+        self.width = set_width
 
         self.f = filters(system_wavelen_min,
                          system_wavelen_max,
@@ -273,6 +274,7 @@ class siggi(_siggiBase):
                                                 filt_min,
                                                 filt_max,
                                                 ratio=self.ratio,
+                                                width=self.width,
                                                 rand_state=rand_state)
         if self.verbosity >= 10:
             print(dim_list, x0)
@@ -309,8 +311,8 @@ class siggi(_siggiBase):
                 if ((i == 0) and (load_optimizer is None)):
                     x = x0
                 elif ((load_optimizer is not None) and
-                      (starting_points is not None) and (i==0)):
-                    x = x1 # Hack to avoid redoing the 3 base points
+                      (starting_points is not None) and (i == 0)):
+                    x = x1  # Hack to avoid redoing the 3 base points
                     print(x)
                 else:
                     x = []
@@ -325,6 +327,7 @@ class siggi(_siggiBase):
                                                          filt_max,
                                                          self.num_filters,
                                                          self.ratio,
+                                                         self.width,
                                                          self.f.wavelen_step)
                             if filt_input is True:
                                 x.append(point)
@@ -345,7 +348,7 @@ class siggi(_siggiBase):
                                 next_pt += best_xi
                                 filt_input = self.validate_filter_input(
                                     next_pt, filt_min, filt_max,
-                                    self.num_filters, self.ratio,
+                                    self.num_filters, self.ratio, self.width,
                                     self.f.wavelen_step)
                                 if filt_input is True:
                                     x.append(list(np.sort(next_pt)))
@@ -385,14 +388,30 @@ class siggi(_siggiBase):
 
             filt_input = []
 
-            for i in range(self.num_filters):
-                edges = np.array(filt_params[2*i:2*(i+1)])
-                bottom_len = edges[1] - edges[0]
-                top_len = self.ratio*bottom_len
-                center = edges[0] + bottom_len/2.
-                top_left = center - top_len/2.
-                top_right = center + top_len/2.
-                filt_input.append([edges[0], top_left, top_right, edges[1]])
+            if self.width is None:
+
+                for i in range(self.num_filters):
+                    edges = np.array(filt_params[2*i:2*(i+1)])
+                    bottom_len = edges[1] - edges[0]
+                    top_len = self.ratio*bottom_len
+                    center = edges[0] + bottom_len/2.
+                    top_left = center - top_len/2.
+                    top_right = center + top_len/2.
+                    filt_input.append([edges[0], top_left,
+                                       top_right, edges[1]])
+
+            else:
+
+                for i in range(self.num_filters):
+                    edges = np.array(filt_params[i:(i+1)])
+                    bottom_len = self.width
+                    top_len = self.ratio*bottom_len
+                    center = edges[0] + bottom_len/2.
+                    top_left = center - top_len/2.
+                    top_right = center + top_len/2.
+                    filt_input.append([edges[0], top_left,
+                                       top_right, edges[0]+self.width])
+
         else:
             filt_input = [filt_params[4*i:4*(i+1)]
                           for i in range(self.num_filters)]
@@ -430,7 +449,7 @@ class siggi(_siggiBase):
                    ref_filter=self.calib_filter,
                    phot_params=self.phot_params)
         step_result = c.calc_IG(rand_state=np.random.RandomState(1344))
-                        #np.int(np.sum(filt_params))))
+
         if self.verbosity >= 10:
             print(filt_params, step_result)
 

@@ -1,9 +1,4 @@
-import os
 import numpy as np
-from copy import deepcopy
-from functools import reduce
-from . import filters, spectra, calcIG
-from .lsst_utils import BandpassDict
 
 __all__ = ["_siggiBase"]
 
@@ -15,7 +10,14 @@ class _siggiBase(object):
     """
 
     def set_starting_points(self, x0, num_filters, filt_min, filt_max,
-                            ratio=None, rand_state=None):
+                            ratio=None, width=None, rand_state=None):
+
+        if width is not None:
+            assert (ratio is not None), \
+                str("Ratio cannot be None when setting a width for now.")
+
+        if ((width is not None) and (width > (filt_max - filt_min))):
+            raise ValueError('Width must not be greater than filter bounds.')
 
         if x0 is None:
             x0 = []
@@ -23,9 +25,14 @@ class _siggiBase(object):
         else:
             # Check that form is appropriate
             if ratio is not None:
-                assert (np.shape(x0)[1] == 2*num_filters), \
-                    str("Wrong shape of x0. " +
-                        "Need 2*number of filters in each starting point.")
+                if width is None:
+                    assert (np.shape(x0)[1] == 2*num_filters), \
+                        str("Wrong shape of x0. " +
+                            "Need 2*number of filters in each starting point.")
+                else:
+                    assert (np.shape(x0)[1] == num_filters), \
+                        str("Wrong shape of x0. " +
+                            "Need 1*number of filters in each starting point.")
             else:
                 assert (np.shape(x0)[1] == 4*num_filters), \
                     str("Wrong shape of x0. " +
@@ -36,10 +43,15 @@ class _siggiBase(object):
             rand_state = np.random.RandomState()
 
         if ratio is not None:
-            x0_len = 2*num_filters
-            dim_list = [(filt_min, filt_max)
-                        for n in range(x0_len)]
-            cuts = 2
+            if width is None:
+                x0_len = 2*num_filters
+                dim_list = [(filt_min, filt_max)
+                            for n in range(x0_len)]
+                cuts = 2
+            else:
+                x0_len = num_filters
+                dim_list = [(filt_min, filt_max) for n in range(x0_len)]
+                cuts = 1
         else:
             x0_len = 4*num_filters
             dim_list = [(filt_min,
@@ -49,6 +61,42 @@ class _siggiBase(object):
         # Create multiple starting points
         x_starts = list(np.linspace(filt_min, filt_max,
                                     num_filters+1))
+
+        if width is not None:
+            x_starts = list(np.linspace(filt_min, filt_max-(width),
+                                        num_filters))
+
+            x_full_space = np.empty(x0_len)
+            for i in range(num_filters):
+                x_full_space[cuts*i] = x_starts[i]
+            x0.append(list(x_full_space))
+
+            space_length = filt_max - filt_min
+            space_third = space_length / 3
+            x_starts_l = list(np.linspace(filt_min + space_third,
+                                          filt_max-(width), num_filters))
+            x_space_l = np.empty(x0_len)
+            for i in range(num_filters):
+                x_space_l[cuts*i] = x_starts_l[i]
+            x0.append(list(x_space_l))
+
+            x_starts_r = list(np.linspace(filt_min + 2*space_third,
+                                          filt_max-(width), num_filters))
+            x_space_r = np.empty(x0_len)
+            for i in range(num_filters):
+                x_space_r[cuts*i] = x_starts_r[i]
+            x0.append(list(x_space_r))
+
+            if add_pts > 0:
+                for i in range(add_pts):
+                    x_random = rand_state.uniform(low=filt_min,
+                                                  high=filt_max-width,
+                                                  size=x0_len)
+                    x_random = list(np.sort(x_random))
+                    x0.append(x_random)
+
+            return dim_list, x0
+
         x_full_space = np.empty(x0_len)
         for i in range(num_filters):
             x_full_space[cuts*i] = x_starts[i]
@@ -91,32 +139,44 @@ class _siggiBase(object):
         return dim_list, x0
 
     def validate_filter_input(self, filt_edges, filt_min, filt_max,
-                              num_filters, ratio=None,
+                              num_filters, ratio=None, width=None,
                               wavelen_step=0.1):
 
         # Make sure input is correct shape
         if ratio is not None:
-            assert (len(filt_edges) == num_filters*2)
+            if width is None:
+                assert (len(filt_edges) == num_filters*2)
+            else:
+                assert (len(filt_edges) == num_filters)
+                assert ((filt_max - filt_min) >= width)
         else:
             assert (len(filt_edges) == num_filters*4)
-
-        if filt_edges[0] < filt_min:
-            return False
-        elif filt_edges[-1] > filt_max:
-            return False
 
         if ratio is not None:
 
             filt_input = []
 
-            for i in range(num_filters):
-                edges = np.array(filt_edges[2*i:2*(i+1)])
-                bottom_len = edges[1] - edges[0]
-                top_len = ratio*bottom_len
-                center = edges[0] + bottom_len/2.
-                top_left = center - top_len/2.
-                top_right = center + top_len/2.
-                filt_input.append([edges[0], top_left, top_right, edges[1]])
+            if width is None:
+                for i in range(num_filters):
+                    edges = np.array(filt_edges[2*i:2*(i+1)])
+                    bottom_len = edges[1] - edges[0]
+                    top_len = ratio*bottom_len
+                    center = edges[0] + bottom_len/2.
+                    top_left = center - top_len/2.
+                    top_right = center + top_len/2.
+                    filt_input.append([edges[0], top_left,
+                                       top_right, edges[1]])
+
+            else:
+                for i in range(num_filters):
+                    edges = np.array(filt_edges[i:(i+1)])
+                    bottom_len = width
+                    top_len = ratio*bottom_len
+                    center = edges[0] + bottom_len/2.
+                    top_left = center - top_len/2.
+                    top_right = center + top_len/2.
+                    filt_input.append([edges[0], top_left,
+                                       top_right, edges[0]+width])
         else:
             filt_input = [filt_edges[4*i:4*(i+1)]
                           for i in range(num_filters)]
@@ -131,6 +191,11 @@ class _siggiBase(object):
                 return False
             elif filt_list[-1] - filt_list[0] < 3.*wavelen_step:
                 return False
+
+        if filt_input[0][0] < filt_min:
+            return False
+        elif filt_input[-1][-1] > filt_max:
+            return False
 
         # At this point if there is only one filter we are good
         # Else we will continue and check that the filters centers

@@ -1,7 +1,7 @@
 ## Example 6 filter script
 # First import code
 import sys
-sys.path.append('..')
+sys.path.append('../../')
 import os
 import time
 from siggi import siggi, filters, spectra, Sed
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     sed_weights = np.ones(len(sed_list))/len(sed_list)
 
     sig_example = siggi(sed_list,
-                        sed_weights, prior_z, 
+                        sed_weights, prior_z,
                         z_min=0.00, z_max=2.3, z_steps=47)
 
     num_filters = 6
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         print(os.path.join(bp_dir, 'filter_%s.dat' % filter_name))
         current_bp.readThroughput(os.path.join(bp_dir, 'filter_%s.dat' % filter_name))
         bp_list.append(current_bp)
- 
+
     x0 = None
     y0 = None
 
@@ -65,16 +65,16 @@ if __name__ == "__main__":
                                        rand_state=rand_state,
                                        max_search_factor=100,
                                        save_optimizer='frozen_filter_opt_%i.pkl' % int(ratio*10))
-        
+
     trial_vals = np.array(res.yi)
     trial_pts = np.array(res.Xi)
     best_val = np.min(res.yi)
     best_pt = trial_pts[np.argmin(res.yi)]
     random_pts_used = res.random_pts_used
-    
+
     non_zero_pts = np.where(trial_vals != 0.)[0]
     total_non_zero = len(non_zero_pts)
-    
+
     suffix = '6filter_catsim_%02i' % int(ratio*10)
 
     with open('results/run_results_%s.txt' % suffix, 'w') as f:
@@ -85,13 +85,13 @@ if __name__ == "__main__":
             f.write('%.4f ' % pt_val)
         f.write('\n')
         f.write('Best Information Gain: %.4f' % (-1.*best_val))
-    
+
     np.savetxt('results/run_points_%s.txt' % suffix, trial_pts, fmt='%f')
     np.savetxt('results/run_values_%s.txt' % suffix, -1.*np.array(trial_vals), fmt='%f')
-    
-    
+
+
     finish = time.time()
-    
+
     print('Job finished in %.4f seconds.' % (finish-start))
-    
+
     print(best_pt, -1.*best_val)

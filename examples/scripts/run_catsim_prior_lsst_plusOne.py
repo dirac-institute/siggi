@@ -1,7 +1,7 @@
 ## Example LSST+1 script
 # First import code
 import sys
-sys.path.append('..')
+sys.path.append('../..')
 import os
 import time
 from siggi import siggi, filters, spectra, Sed
@@ -19,9 +19,9 @@ if __name__ == "__main__":
     s = spectra()
 
     sed_list = []
-    for sed_name in os.listdir('../data/cww_kin_lephare/'):
+    for sed_name in os.listdir('../../data/cww_kin_lephare/'):
         sed_obj = Sed()
-        sed_obj.readSED_flambda('../data/cww_kin_lephare/%s' % sed_name)
+        sed_obj.readSED_flambda('../../data/cww_kin_lephare/%s' % sed_name)
         # Convert from angstroms to nm
         sed_obj.wavelen /= 10.
         sed_list.append(sed_obj)
@@ -41,13 +41,13 @@ if __name__ == "__main__":
         new_phot_params[filter_name] = PhotometricParameters(bandpass=filter_name)
 
     new_phot_params['filter_0'] = PhotometricParameters(nexp=160*2, bandpass='filter_6')
-    #bp_list.append(new_filt['filter_0'])                                                                                                                                                       
-    frozen_dict = BandpassDict(bp_list, ['u', 'g', 'r', 'i', 'z', 'y'])#, 'filter_0'])  
+    #bp_list.append(new_filt['filter_0'])
+    frozen_dict = BandpassDict(bp_list, ['u', 'g', 'r', 'i', 'z', 'y'])#, 'filter_0'])
 
     sed_weights = np.ones(len(sed_list))/len(sed_list)
 
     sig_example = siggi(sed_list,
-                        sed_weights, prior_z, 
+                        sed_weights, prior_z,
                         z_min=0.00, z_max=2.3, z_steps=47, phot_params=new_phot_params)
 
     x0 = None#[[300.,         414.99703239, 562.22744686, 630.98517889 ],
@@ -70,19 +70,20 @@ if __name__ == "__main__":
                                        frozen_filt_dict=frozen_dict,
                                        frozen_filt_eff_wavelen=[365., 477., 622., 765., 870., 1015],
                                        #acq_func_kwargs_dict={'kappa':3.5},
+                                       set_width=10,
                                        optimizer_verbosity=10,
                                        rand_state=rand_state,
                                        save_optimizer='frozen_filter_opt.pkl')
-        
+
     trial_vals = np.array(res.yi)
     trial_pts = np.array(res.Xi)
     best_val = np.min(res.yi)
     best_pt = trial_pts[np.argmin(res.yi)]
     random_pts_used = res.random_pts_used
-    
+
     non_zero_pts = np.where(trial_vals != 0.)[0]
     total_non_zero = len(non_zero_pts)
-    
+
     suffix = 'ff_10sed_catsim_long'
 
     with open('results/run_results_%s.txt' % suffix, 'w') as f:
@@ -93,13 +94,13 @@ if __name__ == "__main__":
             f.write('%.4f ' % pt_val)
         f.write('\n')
         f.write('Best Information Gain: %.4f' % (-1.*best_val))
-    
+
     np.savetxt('results/run_points_%s.txt' % suffix, trial_pts, fmt='%f')
     np.savetxt('results/run_values_%s.txt' % suffix, -1.*np.array(trial_vals), fmt='%f')
-    
-    
+
+
     finish = time.time()
-    
+
     print('Job finished in %.4f seconds.' % (finish-start))
-    
+
     print(best_pt, -1.*best_val)

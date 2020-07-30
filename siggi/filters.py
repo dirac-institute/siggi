@@ -62,9 +62,6 @@ class filters(object):
 
             sb = np.zeros(len(wavelen_arr))
 
-            climb_width_l = band[1] - band[0]
-            climb_width_r = band[3] - band[2]
-
             min_idx = np.where(wavelen_arr >=
                                band[0])[0][0]
             min_top_idx = np.where(wavelen_arr >=
