@@ -138,6 +138,39 @@ class _siggiBase(object):
 
         return dim_list, x0
 
+    def get_filter_info(self, set_ratio, set_width, best_point):
+
+        if set_ratio is not None:
+
+            filter_info = []
+
+            if set_width is None:
+                for i in range(int(len(best_point)/2)):
+                    edges = np.array(best_point[2*i:2*(i+1)])
+                    bottom_len = edges[1] - edges[0]
+                    top_len = set_ratio*bottom_len
+                    center = edges[0] + bottom_len/2.
+                    top_left = center - top_len/2.
+                    top_right = center + top_len/2.
+                    filter_info.append([edges[0], top_left,
+                                        top_right, edges[1]])
+            else:
+                for i in range(int(len(best_point))):
+                    edges = np.array(best_point[i:(i+1)])
+                    bottom_len = set_width
+                    top_len = set_ratio*bottom_len
+                    center = edges[0] + bottom_len/2.
+                    top_left = center - top_len/2.
+                    top_right = center + top_len/2.
+                    filter_info.append([edges[0], top_left,
+                                        top_right,
+                                        edges[0]+set_width])
+        else:
+            filter_info = [best_point[4*i:4*(i+1)]
+                           for i in range(int(len(best_point)/4))]
+
+        return filter_info
+
     def validate_filter_input(self, filt_edges, filt_min, filt_max,
                               num_filters, ratio=None, width=None,
                               wavelen_step=0.1):
@@ -152,34 +185,7 @@ class _siggiBase(object):
         else:
             assert (len(filt_edges) == num_filters*4)
 
-        if ratio is not None:
-
-            filt_input = []
-
-            if width is None:
-                for i in range(num_filters):
-                    edges = np.array(filt_edges[2*i:2*(i+1)])
-                    bottom_len = edges[1] - edges[0]
-                    top_len = ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filt_input.append([edges[0], top_left,
-                                       top_right, edges[1]])
-
-            else:
-                for i in range(num_filters):
-                    edges = np.array(filt_edges[i:(i+1)])
-                    bottom_len = width
-                    top_len = ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filt_input.append([edges[0], top_left,
-                                       top_right, edges[0]+width])
-        else:
-            filt_input = [filt_edges[4*i:4*(i+1)]
-                          for i in range(num_filters)]
+        filt_input = self.get_filter_info(ratio, width, filt_edges)
 
         for filt_list in filt_input:
             filt_diffs = [filt_list[idx] - filt_list[idx-1]
