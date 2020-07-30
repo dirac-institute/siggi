@@ -102,6 +102,37 @@ class testSiggi(unittest.TestCase):
 
         return
 
+    def test_get_filter_info(self):
+
+        test_filters = [[350., 350., 650., 650.],
+                        [500., 500., 800., 800.]]
+
+        test_sb = _siggiBase()
+
+        set_ratio = None
+        set_width = None
+
+        tf_1 = test_sb.get_filter_info(set_ratio, set_width,
+                                       np.array(test_filters).flatten())
+
+        np.testing.assert_array_equal(test_filters, tf_1)
+
+        set_ratio = 1.0
+
+        tf_2 = test_sb.get_filter_info(set_ratio, set_width,
+                                       np.array(test_filters).flatten()[::2])
+
+        np.testing.assert_array_equal(test_filters, tf_2)
+
+        set_width = 300
+
+        tf_3 = test_sb.get_filter_info(set_ratio, set_width,
+                                       np.array(test_filters).flatten()[::4])
+
+        np.testing.assert_array_equal(test_filters, tf_3)
+
+        return
+
     def test_validate_filter_input(self):
 
         test_sb = _siggiBase()

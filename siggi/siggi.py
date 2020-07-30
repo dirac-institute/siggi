@@ -384,37 +384,7 @@ class siggi(_siggiBase):
 
     def set_filters(self, filt_params):
 
-        if self.ratio is not None:
-
-            filt_input = []
-
-            if self.width is None:
-
-                for i in range(self.num_filters):
-                    edges = np.array(filt_params[2*i:2*(i+1)])
-                    bottom_len = edges[1] - edges[0]
-                    top_len = self.ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filt_input.append([edges[0], top_left,
-                                       top_right, edges[1]])
-
-            else:
-
-                for i in range(self.num_filters):
-                    edges = np.array(filt_params[i:(i+1)])
-                    bottom_len = self.width
-                    top_len = self.ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filt_input.append([edges[0], top_left,
-                                       top_right, edges[0]+self.width])
-
-        else:
-            filt_input = [filt_params[4*i:4*(i+1)]
-                          for i in range(self.num_filters)]
+        filt_input = self.get_filter_info(self.ratio, self.width, filt_params)
 
         filt_dict = self.f.trap_filters(filt_input)
 

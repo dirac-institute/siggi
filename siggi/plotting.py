@@ -65,39 +65,6 @@ class plotting(_siggiBase):
         else:
             self.calib_filter = calib_filter
 
-    def get_filter_info(self, set_ratio, set_width, best_point):
-
-        if set_ratio is not None:
-
-            filter_info = []
-
-            if set_width is None:
-                for i in range(int(len(best_point)/2)):
-                    edges = np.array(best_point[2*i:2*(i+1)])
-                    bottom_len = edges[1] - edges[0]
-                    top_len = set_ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filter_info.append([edges[0], top_left,
-                                        top_right, edges[1]])
-            else:
-                for i in range(int(len(best_point))):
-                    edges = np.array(best_point[i:(i+1)])
-                    bottom_len = set_width
-                    top_len = set_ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filter_info.append([edges[0], top_left,
-                                        top_right,
-                                        edges[0]+set_width])
-        else:
-            filter_info = [best_point[4*i:4*(i+1)]
-                           for i in range(int(len(best_point)/4))]
-
-        return filter_info
-
     def plot_filters(self, fig=None):
 
         """
