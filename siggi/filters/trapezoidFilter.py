@@ -1,25 +1,17 @@
 import numpy as np
-from . import Bandpass, BandpassDict
+from siggi.lsst_utils import Bandpass, BandpassDict
+from siggi.filters.baseFilter import baseFilter
 
-__all__ = ["filters"]
+__all__ = ["trapezoidFilter"]
 
 
-class filters(object):
+class trapezoidFilter(baseFilter):
 
     """
-    This class enables easy creation of various filters that are loaded into
-    a Bandpass dictionary.
+    This class enables easy creation of trapeziodal filters
     """
 
-    def __init__(self, wavelen_min=300., wavelen_max=1200., wavelen_step=0.1):
-
-        self.wavelen_min = wavelen_min
-        self.wavelen_max = wavelen_max
-        self.wavelen_step = wavelen_step
-
-        return
-
-    def trap_filters(self, filter_details):
+    def create_filter_bandpasses_from_corners(self, filter_corners):
 
         """
 
@@ -28,7 +20,7 @@ class filters(object):
         Input
         -----
 
-        filter_details, list, (n_filters, 4)
+        filter_corners, list, (n_filters, 4)
 
             Each row should have the lower left, upper left, upper right
             and lower right corners of the filter in wavelength space.
@@ -41,18 +33,23 @@ class filters(object):
             This can then be used to calculate magnitudes on spectra
         """
 
-        if (len(np.shape(filter_details)) == 2 and
-                np.shape(filter_details)[1] == 4):
+        # Verify wavelen grid setup
+
+        if self.wavelen_grid_set is False:
+            raise ValueError("Wavelen grid needs to be set")
+
+        if (len(np.shape(filter_corners)) == 2 and
+                np.shape(filter_corners)[1] == 4):
             pass
-        elif (len(np.shape(filter_details)) == 1 and
-              np.shape(filter_details)[0] == 4):
-            filter_details = np.reshape(filter_details, (1, 4))
+        elif (len(np.shape(filter_corners)) == 1 and
+              np.shape(filter_corners)[0] == 4):
+            filter_corners = np.reshape(filter_corners, (1, 4))
         else:
             raise ValueError("Input should be (n_filters, 4) size array")
 
         bandpass_list = []
 
-        for band in filter_details:
+        for band in filter_corners:
 
             offset = self.wavelen_step / 2.
 
@@ -89,6 +86,13 @@ class filters(object):
             name_list = ['filter_%i' % idx for idx in
                          range(len(bandpass_list))]
 
-            bandpass_dict = BandpassDict(bandpass_list, name_list)
+        return bandpass_list, name_list
+
+    def create_filter_dict_from_corners(self, filter_corners):
+
+        bandpass_list, bandpass_names = \
+            self.create_filter_bandpasses_from_corners(filter_corners)
+
+        bandpass_dict = BandpassDict(bandpass_list, bandpass_names)
 
         return bandpass_dict

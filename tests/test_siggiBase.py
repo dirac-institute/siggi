@@ -1,6 +1,7 @@
 import os
 import unittest
-from siggi import _siggiBase, filters, spectra
+from siggi import _siggiBase, spectra
+from siggi.filters import filterFactory
 from siggi.lsst_utils import BandpassDict
 import numpy as np
 
@@ -10,7 +11,6 @@ class testSiggi(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
-        cls.f = filters()
         s = spectra()
         cls.red_spec = s.get_red_spectrum()
         cls.blue_spec = s.get_blue_spectrum()
@@ -20,24 +20,6 @@ class testSiggi(unittest.TestCase):
                         bandpassDir=os.path.join(os.path.dirname(__file__),
                                                  '../siggi/data',
                                                  'lsst_baseline_throughputs'))
-
-        return
-
-    def test_find_filt_centers(self):
-
-        test_sb = _siggiBase()
-
-        t_f_4 = test_sb.find_filt_centers([400., 500., 600., 700.])
-        self.assertAlmostEqual(t_f_4, [550.])
-
-        # We calculate the center by finding the point where half of the
-        # area under the transmission curve is to the left and half to
-        # the right of the given point.
-        t_f_5 = test_sb.find_filt_centers([[400., 500., 600., 700.],
-                                           [400., 400., 800., 800.],
-                                           [400., 400., 400., 800.]])
-        self.assertAlmostEqual(t_f_5,
-                               [550., 600., 800 - 400/np.sqrt(2)])
 
         return
 
@@ -102,241 +84,191 @@ class testSiggi(unittest.TestCase):
 
         return
 
-    def test_get_filter_info(self):
-
-        test_filters = [[350., 350., 650., 650.],
-                        [500., 500., 800., 800.]]
+    def test_create_and_validate_filter_dict(self):
 
         test_sb = _siggiBase()
+        test_f = filterFactory.create_filter_object('trap')
 
-        set_ratio = None
-        set_width = None
+        # Test that assertion raised if wavelength grid not set
+        self.assertRaises(AssertionError,
+                          test_sb.create_and_validate_filter_dict,
+                          [200.]*4, 200., 200., 2, test_f)
 
-        tf_1 = test_sb.get_filter_info(set_ratio, set_width,
-                                       np.array(test_filters).flatten())
-
-        np.testing.assert_array_equal(test_filters, tf_1)
-
-        set_ratio = 1.0
-
-        tf_2 = test_sb.get_filter_info(set_ratio, set_width,
-                                       np.array(test_filters).flatten()[::2])
-
-        np.testing.assert_array_equal(test_filters, tf_2)
-
-        set_width = 300
-
-        tf_3 = test_sb.get_filter_info(set_ratio, set_width,
-                                       np.array(test_filters).flatten()[::4])
-
-        np.testing.assert_array_equal(test_filters, tf_3)
-
-        return
-
-    def test_validate_filter_input(self):
-
-        test_sb = _siggiBase()
+        test_f.set_wavelen_grid()
 
         # Test AssertionError raised with wrong number of filt edges
         self.assertRaises(AssertionError,
-                          test_sb.validate_filter_input,
-                          [200.]*4, 200., 200., 2)
+                          test_sb.create_and_validate_filter_dict,
+                          [200.]*4, 200., 200., 2, test_f)
 
         # Test AssertionError raised with wrong number of filt edges
         self.assertRaises(AssertionError,
-                          test_sb.validate_filter_input,
-                          [200.]*8, 200., 200., 2, 0.5)
+                          test_sb.create_and_validate_filter_dict,
+                          [200.]*8, 200., 200., 2, test_f, 0.5)
 
         # Test AssertionError raised with wrong number of filt edges
         self.assertRaises(AssertionError,
-                          test_sb.validate_filter_input,
-                          [301., 302.], 300., 302., 1, ratio=0.5,
+                          test_sb.create_and_validate_filter_dict,
+                          [301., 302.], 300., 302., 1, test_f, ratio=0.5,
                           width=1.)
 
         # Test AssertionError raised with width
         # unable to fit with filter bounds
         self.assertRaises(AssertionError,
-                          test_sb.validate_filter_input,
-                          [301.], 300., 302., 1, ratio=0.5,
+                          test_sb.create_and_validate_filter_dict,
+                          [301.], 300., 302., 1, test_f, ratio=0.5,
                           width=10.)
 
         # Test that higher center filter is not to left of lower
-        test_input_0 = test_sb.validate_filter_input([400., 401., 402., 403.,
-                                                      300., 301., 302., 303.],
-                                                     300., 600., 2)
+        test_input_0 = test_sb.create_and_validate_filter_dict(
+            [400., 401., 402., 403., 300., 301., 302., 303.],
+            300., 600., 2, test_f
+        )
         self.assertFalse(test_input_0)
 
-        test_input_0_ratio = test_sb.validate_filter_input([400., 403., 300.,
-                                                            303.],
-                                                           300., 600., 2,
-                                                           ratio=0.5)
+        test_input_0_ratio = test_sb.create_and_validate_filter_dict(
+            [400., 403., 300., 303.], 300., 600., 2, test_f, ratio=0.5
+        )
 
         self.assertFalse(test_input_0_ratio)
 
         # Test that proper filters get through
-        test_input_1 = test_sb.validate_filter_input([300., 301., 302., 303.,
-                                                      400., 401., 402., 403.],
-                                                     300., 403., 2)
+        test_input_1 = test_sb.create_and_validate_filter_dict(
+            [300., 301., 302., 303., 400., 401., 402., 403.],
+            300., 403., 2, test_f
+        )
         self.assertTrue(test_input_1)
 
-        test_input_1_ratio = test_sb.validate_filter_input([300., 303.,
-                                                            400., 403.],
-                                                           300., 403., 2,
-                                                           ratio=0.5)
+        test_input_1_ratio = test_sb.create_and_validate_filter_dict(
+            [300., 303., 400., 403.], 300., 403., 2, test_f, ratio=0.5
+        )
         self.assertTrue(test_input_1_ratio)
 
         # Test that filter cannot be less than min allowed wavelength
-        test_input_2 = test_sb.validate_filter_input([300., 301., 302., 303.,
-                                                      400., 401., 402., 403.],
-                                                     301., 600., 2)
+        test_input_2 = test_sb.create_and_validate_filter_dict(
+            [300., 301., 302., 303., 400., 401., 402., 403.],
+            301., 600., 2, test_f
+        )
         self.assertFalse(test_input_2)
 
-        test_input_2_ratio = test_sb.validate_filter_input([300., 303.,
-                                                            400., 403.],
-                                                           301., 600., 2,
-                                                           ratio=0.5)
+        test_input_2_ratio = test_sb.create_and_validate_filter_dict(
+            [300., 303., 400., 403.], 301., 600., 2, test_f, ratio=0.5
+        )
         self.assertFalse(test_input_2_ratio)
 
         # Test that filter cannot be more than max allowed wavelength
-        test_input_3 = test_sb.validate_filter_input([300., 301., 302., 303.,
-                                                      400., 401., 402., 403.],
-                                                     300., 402., 2)
+        test_input_3 = test_sb.create_and_validate_filter_dict(
+            [300., 301., 302., 303., 400., 401., 402., 403.],
+            300., 402., 2, test_f
+        )
         self.assertFalse(test_input_3)
 
-        test_input_3_ratio = test_sb.validate_filter_input([300., 303.,
-                                                            400., 403.],
-                                                           300., 402., 2,
-                                                           ratio=0.5)
+        test_input_3_ratio = test_sb.create_and_validate_filter_dict(
+            [300., 303., 400., 403.], 300., 402., 2, test_f, ratio=0.5)
         self.assertFalse(test_input_3_ratio)
 
         # Test that a single filter will properly be tested
 
-        test_input_4 = test_sb.validate_filter_input([300., 301., 302., 303.],
-                                                     300., 600., 1)
-
+        test_input_4 = test_sb.create_and_validate_filter_dict(
+            [300., 301., 302., 303.], 300., 600., 1, test_f
+        )
         self.assertTrue(test_input_4)
 
-        test_input_4_ratio = test_sb.validate_filter_input([300., 303.],
-                                                           300., 600., 1,
-                                                           ratio=0.5)
-
+        test_input_4_ratio = test_sb.create_and_validate_filter_dict(
+            [300., 303.], 300., 600., 1, test_f, ratio=0.5
+        )
         self.assertTrue(test_input_4_ratio)
 
-        test_input_5 = test_sb.validate_filter_input([300., 301., 302., 303.],
-                                                     301., 600., 1)
-
+        test_input_5 = test_sb.create_and_validate_filter_dict(
+            [300., 301., 302., 303.], 301., 600., 1, test_f
+        )
         self.assertFalse(test_input_5)
 
-        test_input_5_ratio = test_sb.validate_filter_input([300., 303.],
-                                                           301., 600., 1,
-                                                           ratio=0.5)
-
+        test_input_5_ratio = test_sb.create_and_validate_filter_dict(
+            [300., 303.], 301., 600., 1, test_f, ratio=0.5
+        )
         self.assertFalse(test_input_5_ratio)
 
-        test_input_6 = test_sb.validate_filter_input([300., 301., 302., 303.],
-                                                     300., 302., 1)
-
+        test_input_6 = test_sb.create_and_validate_filter_dict(
+            [300., 301., 302., 303.], 300., 302., 1, test_f
+        )
         self.assertFalse(test_input_6)
 
-        test_input_6_ratio = test_sb.validate_filter_input([300., 303.],
-                                                           300., 302., 1,
-                                                           ratio=0.5)
-
+        test_input_6_ratio = test_sb.create_and_validate_filter_dict(
+            [300., 303.], 300., 302., 1, test_f, ratio=0.5
+        )
         self.assertFalse(test_input_6_ratio)
 
-        test_input_7 = test_sb.validate_filter_input([300., 301.,
-                                                      302., 301.95],
-                                                     300., 303., 1)
-
+        test_input_7 = test_sb.create_and_validate_filter_dict(
+            [300., 301., 302., 301.95], 300., 303., 1, test_f
+        )
         self.assertFalse(test_input_7)
 
-        test_input_7_ratio = test_sb.validate_filter_input([301., 300.95],
-                                                           300., 302., 1,
-                                                           ratio=0.5)
-
+        test_input_7_ratio = test_sb.create_and_validate_filter_dict(
+            [301., 300.95], 300., 302., 1, test_f, ratio=0.5
+        )
         self.assertFalse(test_input_7_ratio)
 
         # Test filters are not smaller than wavelength step
 
-        wave_step = self.f.wavelen_step
+        wave_step = test_f.wavelen_step
 
-        test_input_8 = test_sb.validate_filter_input([300., 300.,
-                                                      300.,
-                                                      300. + 2*wave_step],
-                                                     300., 303., 1)
-
+        test_input_8 = test_sb.create_and_validate_filter_dict(
+            [300., 300., 300., 300. + 2*wave_step], 300., 303., 1, test_f
+        )
         self.assertFalse(test_input_8)
 
-        test_input_8_ratio = test_sb.validate_filter_input([301.,
-                                                            301. +
-                                                            2*wave_step],
-                                                           300., 302., 1,
-                                                           ratio=0.5)
-
+        test_input_8_ratio = test_sb.create_and_validate_filter_dict(
+            [301., 301. + 2*wave_step], 300., 302., 1, test_f, ratio=0.5
+        )
         self.assertFalse(test_input_8_ratio)
 
         # Test that wavelength step check doesn't affect triangular filter
 
-        test_input_9 = test_sb.validate_filter_input([300., 300.,
-                                                      300. + wave_step*2,
-                                                      301.9],
-                                                     300., 303., 1)
-
+        test_input_9 = test_sb.create_and_validate_filter_dict(
+            [300., 300., 300. + wave_step*2, 301.9], 300., 303., 1, test_f
+        )
         self.assertTrue(test_input_9)
 
-        test_input_10 = test_sb.validate_filter_input([300., 301.,
-                                                       301.5, 301.9,
-                                                       301.9, 302.1,
-                                                       302.3, 302.5],
-                                                      300., 303., 2,
-                                                      wavelen_step=wave_step)
-
+        test_input_10 = test_sb.create_and_validate_filter_dict(
+            [300., 301., 301.5, 301.9, 301.9, 302.1, 302.3, 302.5],
+            300., 303., 2, test_f
+        )
         self.assertTrue(test_input_10)
 
-        test_input_10_ratio = test_sb.validate_filter_input(
-            [301., 301.3, 301.3, 301.9], 300., 302., 2, ratio=0.5,
-            wavelen_step=wave_step
+        test_input_10_ratio = test_sb.create_and_validate_filter_dict(
+            [301., 301.3, 301.3, 301.9], 300., 302., 2, test_f, ratio=0.5
             )
-
         self.assertTrue(test_input_10_ratio)
 
         # Test giving different wavelen_step
 
         wave_step = 0.05
+        test_f.set_wavelen_grid(wavelen_step=wave_step)
 
-        test_input_11 = test_sb.validate_filter_input([300., 300.,
-                                                       300.,
-                                                       300. + wave_step/2.],
-                                                      300., 303., 1,
-                                                      wavelen_step=wave_step)
-
+        test_input_11 = test_sb.create_and_validate_filter_dict(
+            [300., 300., 300., 300. + wave_step/2.], 300., 303., 1, test_f
+        )
         self.assertFalse(test_input_11)
 
-        test_input_11_ratio = test_sb.validate_filter_input(
-            [301., 301. + wave_step/2.], 300., 302., 1, ratio=0.5,
-            wavelen_step=wave_step
-            )
-
+        test_input_11_ratio = test_sb.create_and_validate_filter_dict(
+            [301., 301. + wave_step/2.], 300., 302., 1, test_f, ratio=0.5
+        )
         self.assertFalse(test_input_11_ratio)
 
         # Test giving set width
 
         width = 10
-
-        test_input_12_ratio = test_sb.validate_filter_input([301.],
-                                                            300., 312., 1,
-                                                            ratio=0.5,
-                                                            width=width)
-
+        test_input_12_ratio = test_sb.create_and_validate_filter_dict(
+            [301.], 300., 312., 1, test_f, ratio=0.5, width=width
+        )
         self.assertTrue(test_input_12_ratio)
 
         # Now should fail if the left edge is too great to fit in filt_max
 
-        test_input_13_ratio = test_sb.validate_filter_input([305.],
-                                                            300., 312., 1,
-                                                            ratio=0.5,
-                                                            width=width)
-
+        test_input_13_ratio = test_sb.create_and_validate_filter_dict(
+            [305.], 300., 312., 1, test_f, ratio=0.5, width=width
+        )
         self.assertFalse(test_input_13_ratio)
 
 

@@ -138,42 +138,9 @@ class _siggiBase(object):
 
         return dim_list, x0
 
-    def get_filter_info(self, set_ratio, set_width, best_point):
-
-        if set_ratio is not None:
-
-            filter_info = []
-
-            if set_width is None:
-                for i in range(int(len(best_point)/2)):
-                    edges = np.array(best_point[2*i:2*(i+1)])
-                    bottom_len = edges[1] - edges[0]
-                    top_len = set_ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filter_info.append([edges[0], top_left,
-                                        top_right, edges[1]])
-            else:
-                for i in range(int(len(best_point))):
-                    edges = np.array(best_point[i:(i+1)])
-                    bottom_len = set_width
-                    top_len = set_ratio*bottom_len
-                    center = edges[0] + bottom_len/2.
-                    top_left = center - top_len/2.
-                    top_right = center + top_len/2.
-                    filter_info.append([edges[0], top_left,
-                                        top_right,
-                                        edges[0]+set_width])
-        else:
-            filter_info = [best_point[4*i:4*(i+1)]
-                           for i in range(int(len(best_point)/4))]
-
-        return filter_info
-
-    def validate_filter_input(self, filt_edges, filt_min, filt_max,
-                              num_filters, ratio=None, width=None,
-                              wavelen_step=0.1):
+    def create_and_validate_filter_dict(self, filt_edges, filt_min, filt_max,
+                                        num_filters, filter_obj,
+                                        ratio=None, width=None):
 
         # Make sure input is correct shape
         if ratio is not None:
@@ -185,101 +152,43 @@ class _siggiBase(object):
         else:
             assert (len(filt_edges) == num_filters*4)
 
-        filt_input = self.get_filter_info(ratio, width, filt_edges)
+        assert filter_obj.wavelen_step is not None
+
+        filt_input = filter_obj.calc_corners_from_shape_params(
+            ratio, width, filt_edges
+        )
 
         for filt_list in filt_input:
             filt_diffs = [filt_list[idx] - filt_list[idx-1]
                           for idx in range(1, len(filt_list))]
             filt_diffs = np.array(filt_diffs)
-            if np.min(filt_diffs) < -1.e-6*wavelen_step:
-                return False
+            if np.min(filt_diffs) < -1.e-6*filter_obj.wavelen_step:
+                return None
             elif np.max(filt_diffs) <= 0:
-                return False
-            elif filt_list[-1] - filt_list[0] < 3.*wavelen_step:
-                return False
+                return None
+            elif filt_list[-1] - filt_list[0] < 3.*filter_obj.wavelen_step:
+                return None
 
         if filt_input[0][0] < filt_min:
-            return False
+            return None
         elif filt_input[-1][-1] > filt_max:
-            return False
+            return None
+
+        filt_dict = filter_obj.create_filter_dict_from_corners(filt_input)
 
         # At this point if there is only one filter we are good
         # Else we will continue and check that the filters centers
         # Are increasing uniformly to limit the parameter space
-        if num_filters == 1:
-            return True
+        if len(list(filt_dict.values())) == 1:
+            return filt_dict
 
-        filt_centers = self.find_filt_centers(filt_input)
+        filt_centers = filter_obj.find_filt_centers(filt_dict)
         print(filt_centers, filt_input)
         filt_diffs = [filt_centers[idx] - filt_centers[idx-1]
                       for idx in range(1, len(filt_centers))]
         filt_diffs = np.array(filt_diffs)
 
         if np.min(filt_diffs) < 0:
-            return False
+            return None
 
-        return True
-
-    def find_filt_centers(self, filter_details):
-
-        """
-        Take in the filter input corners and calculate the weighted center
-        of the filter in wavelength space.
-
-        We calculate the center by finding the point where half of the
-        area under the transmission curve is to the left and half to
-        the right of the given point.
-
-        Input
-        -----
-
-        filter_details, list, (n_filters, 4)
-
-            Each row should have the lower left, upper left, upper right
-            and lower right corners of the filter in wavelength space.
-
-        Returns
-        -------
-
-        filt_centers, list of floats
-
-            The wavelength values of the calculated centers of the input
-            filters.
-        """
-
-        if (len(np.shape(filter_details)) == 2 and
-                np.shape(filter_details)[1] == 4):
-            pass
-        elif (len(np.shape(filter_details)) == 1 and
-              np.shape(filter_details)[0] == 4):
-            filter_details = np.reshape(filter_details, (1, 4))
-        else:
-            raise ValueError("Input should be (n_filters, 4) size array")
-
-        filt_centers = []
-
-        for filt in filter_details:
-            a1 = (filt[1] - filt[0])/2.
-            a2 = (filt[2] - filt[1])
-            a3 = (filt[3] - filt[2])/2.
-            half_area = (a1 + a2 + a3)/2.
-
-            if a1 == half_area:
-                filt_centers.append(filt[1])
-            elif a1 > half_area:
-                frac_a1 = half_area/a1
-                length_ha = np.sqrt(frac_a1*(filt[1] - filt[0])**2.)
-                filt_centers.append(filt[0] + length_ha)
-            elif (a1+a2) > half_area:
-                half_a2 = half_area - a1
-                length_ha = (half_a2/a2)*(filt[2] - filt[1])
-                filt_centers.append(filt[1] + length_ha)
-            elif (a1+a2) == half_area:
-                filt_centers.append(filt[2])
-            else:
-                half_a3 = half_area - (a1+a2)
-                frac_a3 = half_a3/a3
-                length_ha = np.sqrt((1-frac_a3)*(filt[3]-filt[2])**2.)
-                filt_centers.append(filt[3] - length_ha)
-
-        return filt_centers
+        return filt_dict

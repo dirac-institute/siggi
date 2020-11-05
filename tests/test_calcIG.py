@@ -2,7 +2,8 @@ import unittest
 import os
 import numpy as np
 from scipy.stats import norm, entropy, multivariate_normal
-from siggi import filters, spectra, calcIG
+from siggi import spectra, calcIG
+from siggi.filters import filterFactory
 from siggi import Sed, Bandpass, BandpassDict
 from siggi.lsst_utils import PhotometricParameters, calcMagError_sed
 from copy import deepcopy
@@ -13,7 +14,8 @@ class testCalcIG(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
-        cls.f = filters()
+        cls.f = filterFactory.create_filter_object('trap')
+        cls.f.set_wavelen_grid()
         s = spectra()
         cls.red_spec = s.get_red_spectrum()
         cls.blue_spec = s.get_blue_spectrum()
@@ -43,8 +45,9 @@ class testCalcIG(unittest.TestCase):
 
     def test_calc_colors(self):
 
-        trap_dict = self.f.trap_filters([[740., 770., 830., 860.],
-                                         [740., 770., 830., 860.]])
+        trap_dict = self.f.create_filter_dict_from_corners(
+            [[740., 770., 830., 860.], [740., 770., 830., 860.]]
+        )
         hardware_filt_dict, total_filt_dict = \
             BandpassDict.addSystemBandpass(trap_dict)
 
@@ -84,9 +87,11 @@ class testCalcIG(unittest.TestCase):
         np.testing.assert_almost_equal(errors, [[test_error*np.sqrt(2)],
                                                 [test_error*np.sqrt(2)]])
 
-        trap_dict_2 = self.f.trap_filters([[420., 435., 465., 480.],
-                                           [770., 785., 815., 830.],
-                                           [970., 985., 1015., 1030.]])
+        trap_dict_2 = self.f.create_filter_dict_from_corners(
+            [[420., 435., 465., 480.],
+             [770., 785., 815., 830.],
+             [970., 985., 1015., 1030.]]
+        )
         hardware_filt_dict_2, total_filt_dict_2 = \
             BandpassDict.addSystemBandpass(trap_dict_2)
 
@@ -140,12 +145,11 @@ class testCalcIG(unittest.TestCase):
     def test_calcIG(self):
 
         # With same filter should be zero information gain. All colors = 0
-        trap_dict = self.f.trap_filters([[740., 770., 830., 860.],
-                                         [740., 770., 830., 860.],
-                                         [740., 770., 830., 860.],
-                                         [740., 770., 830., 860.],
-                                         [740., 770., 830., 860.],
-                                         [740., 770., 830., 860.]])
+        trap_dict = self.f.create_filter_dict_from_corners(
+            [[740., 770., 830., 860.], [740., 770., 830., 860.],
+             [740., 770., 830., 860.], [740., 770., 830., 860.],
+             [740., 770., 830., 860.], [740., 770., 830., 860.]]
+        )
         sed_probs = [0.0, 0.25, 0.25, 0.25, 0.25]
 
         red_copy = deepcopy(self.red_spec)
@@ -160,10 +164,11 @@ class testCalcIG(unittest.TestCase):
         self.assertAlmostEqual(ig, 0., delta=0.01)
 
         # At very high signal to noise information gain should be perfect
-        trap_dict_2 = self.f.trap_filters([[340., 370., 430., 460.],
-                                           [540., 570., 630., 660.],
-                                           [740., 770., 830., 860.]])
-
+        trap_dict_2 = self.f.create_filter_dict_from_corners(
+            [[340., 370., 430., 460.],
+             [540., 570., 630., 660.],
+             [740., 770., 830., 860.]]
+        )
         sed_probs_2 = [0., 0.25, 0.25, 0.25, 0.25]
 
         sed_list = [[deepcopy(self.red_spec)], [deepcopy(self.red_spec_z_1)],
@@ -181,8 +186,9 @@ class testCalcIG(unittest.TestCase):
         self.assertAlmostEqual(ig_2, 2.0, delta=0.01)
 
         # With one dimension should equal 1-d KL divergence
-        trap_dict_3 = self.f.trap_filters([[340., 370., 430., 460.],
-                                           [440., 470., 530., 560.]])
+        trap_dict_3 = self.f.create_filter_dict_from_corners(
+            [[340., 370., 430., 460.], [440., 470., 530., 560.]]
+        )
         sed_probs_3 = [0., 0.5, 0.5]
 
         red_copy = deepcopy(self.red_spec)
@@ -220,8 +226,9 @@ class testCalcIG(unittest.TestCase):
         self.assertAlmostEqual(ig, kl_div, delta=0.01)
 
         # # With one dimension should equal 1-d KL divergence
-        trap_dict_4 = self.f.trap_filters([[340., 370., 430., 460.],
-                                           [440., 470., 530., 560.]])
+        trap_dict_4 = self.f.create_filter_dict_from_corners(
+            [[340., 370., 430., 460.], [440., 470., 530., 560.]]
+        )
         sed_probs_4 = [0.0, 0.25, 0.25, 0.25, 0.25]
 
         red_copy_3 = deepcopy(self.red_spec)
@@ -266,8 +273,9 @@ class testCalcIG(unittest.TestCase):
         self.assertAlmostEqual(ig, kl_div, delta=0.01)
 
         # Colors of 0 don't mean 0 IG if errors are different.
-        trap_dict_5 = self.f.trap_filters([[340., 370., 430., 460.],
-                                           [340., 370., 430., 460.]])
+        trap_dict_5 = self.f.create_filter_dict_from_corners(
+            [[340., 370., 430., 460.], [340., 370., 430., 460.]]
+        )
         sed_probs_5 = [0.0, 0.5, 0.5]
 
         sed_list_5 = [[red_copy], [red_copy_2]]
@@ -298,9 +306,11 @@ class testCalcIG(unittest.TestCase):
         self.assertAlmostEqual(ig, kl_div, delta=0.01)
 
         # Test 2-dimensional example
-        trap_dict_6 = self.f.trap_filters([[340., 370., 430., 460.],
-                                           [340., 370., 430., 460.],
-                                           [440., 470., 530., 560.]])
+        trap_dict_6 = self.f.create_filter_dict_from_corners(
+            [[340., 370., 430., 460.],
+             [340., 370., 430., 460.],
+             [440., 470., 530., 560.]]
+        )
         sed_probs_6 = [0.0, 0.5, 0.5]
 
         sed_list_6 = [[red_copy], [red_copy_2]]
@@ -338,9 +348,11 @@ class testCalcIG(unittest.TestCase):
 
         # Test > 2 values
 
-        trap_dict_6 = self.f.trap_filters([[340., 370., 430., 460.],
-                                           [340., 370., 430., 460.],
-                                           [440., 470., 530., 560.]])
+        trap_dict_6 = self.f.create_filter_dict_from_corners(
+            [[340., 370., 430., 460.],
+             [340., 370., 430., 460.],
+             [440., 470., 530., 560.]]
+        )
         sed_probs_6 = [0, 1./3., 1./3., 1./3.]
 
         sed_list_6 = [[red_copy], [red_copy_2], [red_copy_3]]
@@ -386,9 +398,11 @@ class testCalcIG(unittest.TestCase):
 
         # Test > 2 values
 
-        trap_dict_6 = self.f.trap_filters([[340., 370., 430., 460.],
-                                           [340., 370., 430., 460.],
-                                           [440., 470., 530., 560.]])
+        trap_dict_6 = self.f.create_filter_dict_from_corners(
+            [[340., 370., 430., 460.],
+             [340., 370., 430., 460.],
+             [440., 470., 530., 560.]]
+        )
         sed_probs_6 = [0, .5, .5]
 
         red_copy = deepcopy(self.red_spec)
@@ -447,7 +461,7 @@ class testCalcIG(unittest.TestCase):
         p5_normed = p5/np.sum(p5)
 
         p1_normed = p1/np.sum(p1)
-        p2_normed = p2/np.sum(p2)        
+        p2_normed = p2/np.sum(p2)
         p3_normed = p3/np.sum(p3)
         p4_normed = p4/np.sum(p4)
 
@@ -463,9 +477,11 @@ class testCalcIG(unittest.TestCase):
 
         # Test > 2 values and non-equal prior
 
-        trap_dict_6 = self.f.trap_filters([[340., 370., 430., 460.],
-                                           [340., 370., 430., 460.],
-                                           [440., 470., 530., 560.]])
+        trap_dict_6 = self.f.create_filter_dict_from_corners(
+            [[340., 370., 430., 460.],
+             [340., 370., 430., 460.],
+             [440., 470., 530., 560.]]
+        )
         sed_probs_6 = [0, .5, 2.0]
 
         red_copy = deepcopy(self.red_spec)
@@ -524,7 +540,7 @@ class testCalcIG(unittest.TestCase):
         p5_normed = p5/np.sum(p5)
 
         p1_normed = p1/np.sum(p1)
-        p2_normed = p2/np.sum(p2)        
+        p2_normed = p2/np.sum(p2)
         p3_normed = p3/np.sum(p3)
         p4_normed = p4/np.sum(p4)
 
