@@ -31,4 +31,4 @@ jobs:
     - name: Test with nose #pytest
       run: |
         nosetests -v -s --with-coverage --cover-package=siggi
-      #pytest
+        codecov
