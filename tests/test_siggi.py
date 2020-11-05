@@ -1,8 +1,9 @@
 import os
 import unittest
 import pickle
-from siggi import siggi, filters, spectra
+from siggi import siggi, spectra
 from siggi.lsst_utils import BandpassDict
+from siggi.filters import filterFactory
 import numpy as np
 
 
@@ -11,7 +12,7 @@ class testSiggi(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
-        cls.f = filters()
+        cls.f = filterFactory()
         s = spectra()
         cls.red_spec = s.get_red_spectrum()
         cls.blue_spec = s.get_blue_spectrum()
@@ -44,6 +45,7 @@ class testSiggi(unittest.TestCase):
         set_ratio = 1.0
         set_width = 100
         t_1 = sig_example.optimize_filters(num_filters=num_filters,
+                                           filt_type='trap',
                                            filt_min=300., filt_max=1100.,
                                            set_ratio=set_ratio,
                                            system_wavelen_max=1200.,
@@ -57,6 +59,7 @@ class testSiggi(unittest.TestCase):
                                            rand_state=random_state)
 
         t_2 = sig_example.optimize_filters(num_filters=num_filters,
+                                           filt_type='trap',
                                            filt_min=300., filt_max=1100.,
                                            set_ratio=set_ratio,
                                            system_wavelen_max=1200.,
@@ -169,6 +172,45 @@ class testSiggi(unittest.TestCase):
         self.assertGreaterEqual(len(t_7.Xi), 14)
         np.testing.assert_equal(np.shape(t_7.Xi)[1], num_filters)
         np.testing.assert_equal(len(t_7.Xi), len(t_7.yi))
+
+        # Test comb filters
+
+        random_state = np.random.RandomState(23)
+        num_filters = 1
+        set_ratio = 1.0
+        set_width = 100
+        t_8 = sig_example.optimize_filters(num_filters=num_filters,
+                                           filt_type='comb',
+                                           filt_min=300., filt_max=1100.,
+                                           set_ratio=set_ratio,
+                                           set_width=set_width,
+                                           system_wavelen_max=1200.,
+                                           n_opt_points=14,
+                                           optimizer_verbosity=10,
+                                           procs=4,
+                                           acq_func_kwargs_dict={'kappa': 3},
+                                           frozen_filt_dict=self.frozen_dict,
+                                           frozen_filt_eff_wavelen=[365, 477],
+                                           starting_points=None,
+                                           rand_state=random_state)
+
+        t_9 = sig_example.optimize_filters(num_filters=num_filters,
+                                           filt_type='trap',
+                                           filt_min=300., filt_max=1100.,
+                                           set_ratio=set_ratio,
+                                           set_width=set_width,
+                                           system_wavelen_max=1200.,
+                                           n_opt_points=14,
+                                           optimizer_verbosity=10,
+                                           procs=4,
+                                           acq_func_kwargs_dict={'kappa': 3},
+                                           frozen_filt_dict=self.frozen_dict,
+                                           frozen_filt_eff_wavelen=[365, 477],
+                                           starting_points=None,
+                                           rand_state=23)
+
+        np.testing.assert_array_equal(t_8.Xi, t_9.Xi)
+        np.testing.assert_array_equal(t_8.yi, t_9.yi)
 
     @classmethod
     def tearDownClass(cls):

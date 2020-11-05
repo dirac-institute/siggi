@@ -19,7 +19,7 @@ class testPlotting(unittest.TestCase):
 
     def test_plot_filters(self):
 
-        sig_plot = plotting(self.spec_list, self.best_point,
+        sig_plot = plotting(self.spec_list, self.best_point, 'trap',
                             frozen_filt_dict=None, set_ratio=0.5,
                             sed_mags=22.0)
 
@@ -27,17 +27,29 @@ class testPlotting(unittest.TestCase):
 
         # Test with set_width
 
-        sig_plot = plotting(self.spec_list, self.best_point,
+        sig_plot = plotting(self.spec_list, self.best_point, 'comb',
                             frozen_filt_dict=None, set_ratio=0.5,
                             set_width=100, sed_mags=22.0)
 
         sig_plot.plot_filters()
 
+        # Test with frozen filters
+        frozen_dict = sig_plot.filter_dict
+        frozen_dict._bandpassDict['filter_a'] = frozen_dict['filter_0']
+        del(frozen_dict._bandpassDict['filter_0'])
+        frozen_eff_wavelen = sig_plot.filter_obj.find_filt_centers(frozen_dict)
+
+        sig_plot_2 = plotting(self.spec_list, self.best_point, 'trap',
+                              frozen_filt_dict=sig_plot.filter_dict,
+                              frozen_filt_eff_wavelen=frozen_eff_wavelen,
+                              set_ratio=0.5, sed_mags=22.0)
+        sig_plot_2.plot_filters()
+
         return
 
     def test_plot_color_color(self):
 
-        sig_plot = plotting(self.spec_list, self.best_point,
+        sig_plot = plotting(self.spec_list, self.best_point, 'trap',
                             frozen_filt_dict=None, set_ratio=0.5,
                             sed_mags=22.0)
 
@@ -57,7 +69,7 @@ class testPlotting(unittest.TestCase):
 
         # Test with set_width
 
-        sig_plot = plotting(self.spec_list, self.best_point,
+        sig_plot = plotting(self.spec_list, self.best_point, 'trap',
                             frozen_filt_dict=None, set_ratio=0.5,
                             set_width=100, sed_mags=22.0)
 
@@ -69,7 +81,7 @@ class testPlotting(unittest.TestCase):
 
     def test_plot_ig_space(self):
 
-        sig_plot = plotting(self.spec_list, self.best_point,
+        sig_plot = plotting(self.spec_list, self.best_point, 'trap',
                             frozen_filt_dict=None, set_ratio=0.5,
                             sed_mags=22.0)
 
@@ -92,7 +104,7 @@ class testPlotting(unittest.TestCase):
 
         # Test with set_width
 
-        sig_plot = plotting(self.spec_list, self.best_point[:2],
+        sig_plot = plotting(self.spec_list, self.best_point[:2], 'trap',
                             frozen_filt_dict=None, set_ratio=0.5,
                             set_width=10, sed_mags=22.0)
 
@@ -117,7 +129,7 @@ class testPlotting(unittest.TestCase):
 
     def test_plot_color_distributions(self):
 
-        sig_plot = plotting(self.spec_list, self.best_point,
+        sig_plot = plotting(self.spec_list, self.best_point, 'trap',
                             frozen_filt_dict=None, set_ratio=0.5,
                             sed_mags=22.0)
 
@@ -130,7 +142,7 @@ class testPlotting(unittest.TestCase):
 
         # Test with set_width
 
-        sig_plot = plotting(self.spec_list, self.best_point,
+        sig_plot = plotting(self.spec_list, self.best_point, 'trap',
                             frozen_filt_dict=None, set_ratio=0.5,
                             set_width=100, sed_mags=22.0)
 

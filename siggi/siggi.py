@@ -5,8 +5,9 @@ from skopt import Optimizer
 from skopt.space import Real
 from joblib import Parallel, delayed
 from copy import deepcopy
-from . import filters, calcIG, _siggiBase
+from . import calcIG, _siggiBase
 from .lsst_utils import BandpassDict
+from .filters import filterFactory
 
 __all__ = ["siggi"]
 
@@ -99,13 +100,13 @@ class siggi(_siggiBase):
 
     def optimize_filters(self, filt_min=300., filt_max=1100.,
                          sky_mag=20.47, num_filters=6,
-                         filter_type='trap', frozen_filt_dict=None,
+                         filt_type='trap', frozen_filt_dict=None,
                          frozen_filt_eff_wavelen=None,
                          set_ratio=None,
                          set_width=None,
                          starting_points=None,
                          starting_vals=None,
-                         system_wavelen_min=300., system_wavelen_max=1150.,
+                         system_wavelen_min=300., system_wavelen_max=1200.,
                          system_wavelen_step=0.1,
                          procs=1, n_opt_points=100, acq_func_kwargs_dict=None,
                          acq_opt_kwargs_dict=None, checkpointing=True,
@@ -139,10 +140,10 @@ class siggi(_siggiBase):
 
             The number of filters to optimize
 
-        filter_type, str, default = 'trap'
+        filt_type, str, 'trap' or 'comb', default = 'trap'
 
-            The shape of the filters. Currently can only create
-            trapezoidal shapes before the CCD response function
+            The shape of the filters. Currently can create
+            trapezoidal shapes or comb filters before the CCD response function
             is included.
 
         frozen_filt_dict, BandpassDict Object or None, default = None
@@ -194,7 +195,7 @@ class siggi(_siggiBase):
 
             This is the minimum edge of the Bandpass Objects in nm.
 
-        system_wavelen_max, float default = 1150.
+        system_wavelen_max, float default = 1200.
 
             This is the maximum edge of the Bandpass Objects in nm.
 
@@ -252,14 +253,19 @@ class siggi(_siggiBase):
             corresponding filter inputs are in opt.Xi.
         """
 
+        if frozen_filt_dict is not None:
+            assert_str = str('If frozen_filt_dict specified must also ' +
+                             'include corresponding frozen_filt_eff_wavelen')
+            assert (frozen_filt_eff_wavelen is not None), assert_str
+
         self.num_filters = num_filters
         self.ratio = set_ratio
         self.sky_mag = sky_mag
         self.width = set_width
 
-        self.f = filters(system_wavelen_min,
-                         system_wavelen_max,
-                         system_wavelen_step)
+        self.f = filterFactory.create_filter_object(filt_type)
+        self.f.set_wavelen_grid(system_wavelen_min, system_wavelen_max,
+                                system_wavelen_step)
         self.frozen_filt_dict = frozen_filt_dict
         self.frozen_eff_lambda = frozen_filt_eff_wavelen
         self.verbosity = optimizer_verbosity
@@ -310,27 +316,37 @@ class siggi(_siggiBase):
             while i < n_opt_points:
                 if ((i == 0) and (load_optimizer is None)):
                     x = x0
+                    test_filt_dicts = \
+                        [self.f.create_filter_dict_from_shape_params(
+                            self.ratio, self.width, x_i
+                            )
+                         for x_i in x0]
                 elif ((load_optimizer is not None) and
                       (starting_points is not None) and (i == 0)):
                     x = x1  # Hack to avoid redoing the 3 base points
                     print(x)
+                    test_filt_dicts = \
+                        [self.f.create_filter_dict_from_shape_params(
+                            self.ratio, self.width, x_i
+                            )
+                         for x_i in x1]
                 else:
                     x = []
+                    test_filt_dicts = []
                     pts_needed = procs
                     pts_tried = 0
                     while len(x) < procs:
                         x_pot = opt.ask(n_points=pts_needed, strategy='cl_max')
                         for point in x_pot:
-                            filt_input = \
-                              self.validate_filter_input(point,
-                                                         filt_min,
-                                                         filt_max,
-                                                         self.num_filters,
-                                                         self.ratio,
-                                                         self.width,
-                                                         self.f.wavelen_step)
-                            if filt_input is True:
+                            filt_dict = \
+                                self.create_and_validate_filter_dict(
+                                    point, filt_min, filt_max,
+                                    self.num_filters, self.f,
+                                    self.ratio, self.width
+                                )
+                            if filt_dict is not None:
                                 x.append(point)
+                                test_filt_dicts.append(filt_dict)
                                 pts_needed -= 1
                             else:
                                 opt.tell(point, 0)
@@ -346,19 +362,22 @@ class siggi(_siggiBase):
                                                             size=len(best_xi))
                                 print(best_xi, next_pt)
                                 next_pt += best_xi
-                                filt_input = self.validate_filter_input(
-                                    next_pt, filt_min, filt_max,
-                                    self.num_filters, self.ratio, self.width,
-                                    self.f.wavelen_step)
-                                if filt_input is True:
+                                filt_dict = \
+                                    self.create_and_validate_filter_dict(
+                                        next_pt, filt_min, filt_max,
+                                        self.num_filters, self.f,
+                                        self.ratio, self.width
+                                    )
+                                if filt_dict is not None:
                                     x.append(list(np.sort(next_pt)))
+                                    test_filt_dicts.append(filt_dict)
                                     random_points_used += 1
                                     pts_needed -= 1
                         print(pts_tried)
                     print("Random Points Used: %i" % random_points_used)
 
                 y = parallel(delayed(unwrap_self_f)(arg1, val) for
-                             arg1, val in zip([self]*len(x), x))
+                             arg1, val in zip([self]*len(x), test_filt_dicts))
 
                 opt.tell(x, y)
 
@@ -382,23 +401,18 @@ class siggi(_siggiBase):
 
         return opt
 
-    def set_filters(self, filt_params):
-
-        filt_input = self.get_filter_info(self.ratio, self.width, filt_params)
-
-        filt_dict = self.f.trap_filters(filt_input)
+    def set_filters(self, filt_dict):
 
         if self.frozen_filt_dict is None:
             return filt_dict
         else:
             filter_wavelengths = self.frozen_eff_lambda +\
-                self.find_filt_centers(filt_input)
-            filter_names_unsort = self.frozen_filt_dict.keys() +\
-                filt_dict.keys()
-            filter_list_unsort = self.frozen_filt_dict.values() +\
-                filt_dict.values()
-            if len(filter_wavelengths) != (self.num_filters +
-                                           len(self.frozen_eff_lambda)):
+                self.f.find_filt_centers(filt_dict)
+            filter_names_unsort = list(self.frozen_filt_dict.keys()) +\
+                list(filt_dict.keys())
+            filter_list_unsort = list(self.frozen_filt_dict.values()) +\
+                list(filt_dict.values())
+            if type(filter_wavelengths) != list:
                 raise ValueError("Make sure frozen_filt_eff_wavelen is a list")
             sort_idx = np.argsort(filter_wavelengths)
             filter_names = [filter_names_unsort[idx] for idx in sort_idx]
@@ -406,9 +420,9 @@ class siggi(_siggiBase):
 
             return BandpassDict(filter_list, filter_names)
 
-    def calc_results(self, filt_params):
+    def calc_results(self, filt_dict):
 
-        filt_dict = self.set_filters(filt_params)
+        filt_dict = self.set_filters(filt_dict)
 
         if filt_dict == 0:
             return 0
@@ -421,6 +435,6 @@ class siggi(_siggiBase):
         step_result = c.calc_IG(rand_state=np.random.RandomState(1344))
 
         if self.verbosity >= 10:
-            print(filt_params, step_result)
+            print(self.f.find_filt_centers(filt_dict), step_result)
 
         return -1.*step_result

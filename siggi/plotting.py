@@ -6,28 +6,34 @@ from scipy import stats
 from matplotlib.collections import LineCollection
 from matplotlib import tri
 from matplotlib.patches import Ellipse
-from . import filters, calcIG, _siggiBase
+from . import calcIG
+from .filters import filterFactory
 from .lsst_utils import BandpassDict
 
 
 __all__ = ["plotting"]
 
 
-class plotting(_siggiBase):
+class plotting(object):
 
-    def __init__(self, sed_list, best_point,
+    def __init__(self, sed_list, best_point, filt_type,
                  calib_filter=None, set_ratio=None, set_width=None,
                  frozen_filt_dict=None, frozen_filt_eff_wavelen=None,
                  sky_mag=20.47, sed_mags=25.0):
 
-        f = filters()
+        self.filter_obj = filterFactory.create_filter_object(filt_type)
+        self.filter_obj.set_wavelen_grid()
 
-        filter_info = self.get_filter_info(set_ratio, set_width, best_point)
+        filter_info = self.filter_obj.calc_corners_from_shape_params(
+            set_ratio, set_width, best_point
+        )
 
-        trap_dict = f.trap_filters(filter_info)
+        filt_dict = self.filter_obj.create_filter_dict_from_corners(
+            filter_info
+        )
 
         hardware_filt_dict, total_filt_dict = \
-            BandpassDict.addSystemBandpass(trap_dict)
+            BandpassDict.addSystemBandpass(filt_dict)
 
         if frozen_filt_dict is None:
             self.filter_dict = hardware_filt_dict
@@ -36,7 +42,7 @@ class plotting(_siggiBase):
                 raise ValueError("If including frozen filters, " +
                                  "need list of eff. wavelengths.")
             filter_wavelengths = frozen_filt_eff_wavelen +\
-                self.find_filt_centers(filter_info)
+                self.filter_obj.find_filt_centers(filt_dict)
             filter_names_unsort = frozen_filt_dict.keys() +\
                 hardware_filt_dict.keys()
             filter_list_unsort = frozen_filt_dict.values() +\
@@ -244,10 +250,11 @@ class plotting(_siggiBase):
 
         for filter_set in test_pts:
 
-            filter_info = self.get_filter_info(self.set_ratio,
-                                               self.set_width, filter_set)
+            filter_dict = self.filter_obj.create_filter_dict_from_shape_params(
+                self.set_ratio, self.set_width, filter_set
+            )
 
-            filt_centers.append(self.find_filt_centers(filter_info))
+            filt_centers.append(self.filter_obj.find_filt_centers(filter_dict))
 
         filt_centers = np.array(filt_centers)
 
@@ -268,7 +275,7 @@ class plotting(_siggiBase):
 
         extent = [np.min(xi), np.max(xi), np.min(yi), np.max(yi)]
         plt.imshow(zi_lin, cmap=plt.cm.plasma, origin='lower',
-                   extent=extent, interpolation='bicubic', vmax=1.)
+                   extent=extent, interpolation='bicubic')
 
         if return_centers is True:
             return xi, yi

@@ -1,7 +1,7 @@
 __all__ = ["calcIG", "siggi", "filters", "spectra", "mathUtils"]
 
 from .lsst_utils import Bandpass, BandpassDict, Sed, PhysicalParameters
-from .filters import filters
+from .filters import *
 from .spectra import spectra
 from .mathUtils import mathUtils
 from .calcIG import calcIG
