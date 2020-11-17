@@ -119,7 +119,7 @@ class testCalcIG(unittest.TestCase):
                          ref_filter=total_filt_dict_2['filter_0'],
                          phot_params=self.phot_params)
 
-        colors2, errors2, snr2, mags2, sky_m2 = test_c2.calc_colors(
+        colors2, errors2, snr2, mags2, magerrors2, sky_m2 = test_c2.calc_colors(
                                                         [sed_1],
                                                         return_all=True)
 
