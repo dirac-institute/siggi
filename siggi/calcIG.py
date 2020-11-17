@@ -133,7 +133,7 @@ class calcIG(mathUtils):
 
         if return_all is True:
             return np.array(sed_colors), np.array(color_errors), snr_values,\
-                   sed_mag_list, sky_mags
+                   sed_mag_list, mag_errors, sky_mags
 
         return np.array(sed_colors), np.array(color_errors)
 
