@@ -4,4 +4,13 @@
 # Emacs backups
 *.*~
 *.pyc
+__pycache__/
 examples/.ipynb_checkpoints
+
+# Sphinx / Read the Docs build output
+docs/_build/
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/

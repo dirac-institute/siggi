@@ -8,29 +8,34 @@ __all__ = ["trapezoidFilter"]
 class trapezoidFilter(baseFilter):
 
     """
-    This class enables easy creation of trapeziodal filters
+    Build trapezoidal filter bandpasses from corner wavelengths.
     """
 
     def create_filter_bandpasses_from_corners(self, filter_corners):
 
         """
+        Build trapezoid bandpass objects from their corner wavelengths.
 
-        Return a bandpass dictionary with trapezoid filters.
-
-        Input
-        -----
-
-        filter_corners, list, (n_filters, 4)
-
-            Each row should have the lower left, upper left, upper right
-            and lower right corners of the filter in wavelength space.
+        Parameters
+        ----------
+        filter_corners : array_like, shape (n_filters, 4)
+            Each row holds the lower-left, upper-left, upper-right and
+            lower-right corner wavelengths of a filter. A single filter may
+            be passed as a length-4 one-dimensional array.
 
         Returns
         -------
+        bandpass_list : list of Bandpass
+            One trapezoid ``Bandpass`` object per input row.
+        name_list : list of str
+            The corresponding filter names (``filter_0``, ``filter_1`` ...).
 
-        bandpass_dict, BandpassDict Object
-
-            This can then be used to calculate magnitudes on spectra
+        Raises
+        ------
+        ValueError
+            If the wavelength grid has not been set
+            (:meth:`~siggi.filters.baseFilter.baseFilter.set_wavelen_grid`),
+            or if ``filter_corners`` is not an ``(n_filters, 4)`` array.
         """
 
         # Verify wavelen grid setup
@@ -89,6 +94,21 @@ class trapezoidFilter(baseFilter):
         return bandpass_list, name_list
 
     def create_filter_dict_from_corners(self, filter_corners):
+
+        """
+        Build a ``BandpassDict`` of trapezoid filters from their corners.
+
+        Parameters
+        ----------
+        filter_corners : array_like, shape (n_filters, 4)
+            Lower-left, upper-left, upper-right and lower-right corner
+            wavelengths of each filter.
+
+        Returns
+        -------
+        BandpassDict
+            One ``filter_i`` bandpass per input row.
+        """
 
         bandpass_list, bandpass_names = \
             self.create_filter_bandpasses_from_corners(filter_corners)

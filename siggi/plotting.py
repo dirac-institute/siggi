@@ -16,6 +16,43 @@ __all__ = ["plotting"]
 
 class plotting(object):
 
+    """
+    Diagnostic plots for a ``siggi`` optimization result.
+
+    Given the SED templates and a best-fit filter configuration (the
+    ``best_point`` filter-edge parameters), this class rebuilds the filter
+    bandpasses and provides methods to visualise them against the SEDs, the
+    color-color tracks with redshift, the information-gain space, and the
+    per-redshift color distributions.
+
+    Parameters
+    ----------
+    sed_list : list
+        List of template ``Sed`` objects used in the optimization.
+    best_point : array_like
+        Filter-edge/shape parameters identifying the filter configuration
+        to plot (e.g. ``opt.Xi[best_idx]`` from an optimization run).
+    filt_type : str
+        Filter family, ``'trap'`` or ``'comb'`` (see
+        :class:`~siggi.filters.filterFactory.filterFactory`).
+    calib_filter : Bandpass, optional
+        Bandpass used to normalize SED brightness. Defaults to LSST ``i``.
+    set_ratio, set_width : float, optional
+        Fixed trapezoid shape constraints, matching those passed to
+        :meth:`~siggi.siggi.siggi.optimize_filters`.
+    frozen_filt_dict : BandpassDict, optional
+        Pre-existing (frozen) filters to include alongside the optimized
+        ones. Requires ``frozen_filt_eff_wavelen``.
+    frozen_filt_eff_wavelen : list, optional
+        Effective wavelengths of the frozen filters, used to sort the
+        combined filter set.
+    sky_mag : float, optional
+        Sky-background magnitude used when computing color errors.
+        Default 20.47.
+    sed_mags : float, optional
+        Magnitude to which SEDs are normalized when plotting. Default 25.0.
+    """
+
     def __init__(self, sed_list, best_point, filt_type,
                  calib_filter=None, set_ratio=None, set_width=None,
                  frozen_filt_dict=None, frozen_filt_eff_wavelen=None,
@@ -74,7 +111,17 @@ class plotting(object):
     def plot_filters(self, fig=None):
 
         """
-        Plot the filters over the top of the SEDs used to optimize.
+        Plot the filter throughputs over the template SEDs.
+
+        Parameters
+        ----------
+        fig : matplotlib.figure.Figure, optional
+            Figure to draw into. A new 12x6 figure is created if ``None``.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The figure containing the plot.
         """
 
         if fig is None:
@@ -106,9 +153,18 @@ class plotting(object):
 
     def make_segments(self, x, y):
         '''
-        Create list of line segments from x and y coordinates,
-        in the correct format for LineCollection:
-        an array of the form   numlines x (points per line) x 2 (x and y) array
+        Create line segments from x and y coordinates for a LineCollection.
+
+        Parameters
+        ----------
+        x, y : array_like
+            Coordinates of the points along the line.
+
+        Returns
+        -------
+        numpy.ndarray
+            Array of shape ``(numlines, points_per_line, 2)`` suitable for a
+            ``matplotlib`` ``LineCollection``.
         '''
 
         points = np.array([x, y]).T.reshape(-1, 1, 2)
@@ -121,9 +177,29 @@ class plotting(object):
     def colorline(self, x, y, z=None, cmap=plt.get_cmap('copper'),
                   norm=plt.Normalize(0.0, 1.0), linewidth=3, alpha=1.0):
         '''
-        Plot a colored line with coordinates x and y
-        Optionally specify colors in the array z
-        Optionally specify a colormap, a norm function and a line width
+        Plot a line whose color varies along its length.
+
+        Parameters
+        ----------
+        x, y : array_like
+            Coordinates of the line.
+        z : array_like or float, optional
+            Values mapped through ``cmap`` to color the segments. Defaults to
+            values equally spaced on ``[0, 1]``.
+        cmap : matplotlib.colors.Colormap, optional
+            Colormap used to color the line. Default ``'copper'``.
+        norm : matplotlib.colors.Normalize, optional
+            Normalization mapping ``z`` to ``[0, 1]``. Default
+            ``Normalize(0.0, 1.0)``.
+        linewidth : float, optional
+            Width of the line. Default 3.
+        alpha : float, optional
+            Opacity of the line. Default 1.0.
+
+        Returns
+        -------
+        matplotlib.collections.LineCollection
+            The colored line, already added to the current axes.
         '''
 
         # Default colors equally spaced on [0,1]:
@@ -151,8 +227,30 @@ class plotting(object):
                          include_err=True, ellip_kwargs={}):
 
         """
-        Plot the color-color tracks for each SED template as a function
-        of redshift using pairs of filters.
+        Plot color-color tracks for each SED template versus redshift.
+
+        Parameters
+        ----------
+        filter_names : list of list of str
+            Two pairs of filter names, ``[[x1, x2], [y1, y2]]``, giving the
+            color plotted on the x-axis and the y-axis respectively.
+        redshift_list : array_like
+            Redshifts at which to evaluate the colors along each track.
+        cmap : matplotlib.colors.Colormap, optional
+            Colormap used to encode redshift along the tracks. Default
+            ``'plasma'``.
+        fig : matplotlib.figure.Figure, optional
+            Figure to draw into. A new 12x6 figure is created if ``None``.
+        include_err : bool, optional
+            If ``True``, draw color-error ellipses at each point. Default
+            ``True``.
+        ellip_kwargs : dict, optional
+            Extra keyword arguments passed to the error ``Ellipse`` patches.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The figure containing the plot.
         """
 
         if fig is None:
@@ -228,7 +326,7 @@ class plotting(object):
                                        vmin=np.min(redshift_list),
                                        vmax=np.max(redshift_list)))
         sm._A = []
-        plt.colorbar(sm, label='Redshift')
+        plt.colorbar(sm, ax=plt.gca(), label='Redshift')
 
         if include_err is True:
             ax = plt.gca()
@@ -243,7 +341,28 @@ class plotting(object):
                       return_centers=False):
 
         """
-        Plot the information gain space by filter center position.
+        Plot the information-gain surface over filter-center positions.
+
+        Interpolates the information-gain values across the plane of two
+        filters' center wavelengths and displays it as an image.
+
+        Parameters
+        ----------
+        test_pts : array_like
+            Filter shape parameters for each evaluated point.
+        test_vals : array_like
+            Information-gain value at each point in ``test_pts``.
+        filter_idx : array_like
+            The two filter indices whose centers form the plot axes.
+        return_centers : bool, optional
+            If ``True``, also return the filter-center coordinates used.
+            Default ``False``.
+
+        Returns
+        -------
+        xi, yi : numpy.ndarray
+            The filter-center coordinates of the kept points. Only returned
+            when ``return_centers`` is ``True``.
         """
 
         filt_centers = []
@@ -285,8 +404,28 @@ class plotting(object):
                                  add_cbar=False, include_prior=None):
 
         """
-        Plot the distribution of colors for each SED template as a function
-        of redshift using pairs of filters.
+        Plot the color distribution of each SED template versus redshift.
+
+        Parameters
+        ----------
+        filter_names : list of str
+            Names of the filters whose adjacent colors are plotted.
+        redshift_list : array_like
+            Redshifts at which to draw a color distribution.
+        cmap : matplotlib.colors.Colormap, optional
+            Colormap encoding redshift. Default ``'plasma'``.
+        fig : matplotlib.figure.Figure, optional
+            Figure to draw into. A new 12x6 figure is created if ``None``.
+        add_cbar : bool, optional
+            If ``True``, add a horizontal redshift colorbar. Default
+            ``False``.
+        include_prior : callable, optional
+            If given, a redshift prior used to weight each distribution.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The figure containing the plot.
         """
 
         if fig is None:

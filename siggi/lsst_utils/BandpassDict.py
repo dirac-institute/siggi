@@ -249,7 +249,7 @@ class BandpassDict(object):
         """
 
         if sedobj.wavelen is None:
-            return [numpy.NaN]*len(self._bandpassDict)
+            return [numpy.nan]*len(self._bandpassDict)
         else:
 
             #for some reason, moving this call to flambdaTofnu()
@@ -264,7 +264,7 @@ class BandpassDict(object):
             sedobj.flambdaTofnu()
 
             if indices is not None:
-                outputList = [numpy.NaN] * len(self._bandpassDict)
+                outputList = [numpy.nan] * len(self._bandpassDict)
                 magList = sedobj.manyMagCalc(self._phiArray, self._wavelenStep, observedBandpassInd=indices)
                 for i, ix in enumerate(indices):
                     outputList[ix] = magList[i]
@@ -281,9 +281,9 @@ class BandpassDict(object):
         a copy will be created and resampled onto the wavelength grid of the Bandpasses before
         magnitudes are calculated.  The original Sed will be unchanged.
         @param [in] indices is an optional list of indices indicating which bandpasses to actually
-        calculate magnitudes for.  Other magnitudes will be listed as numpy.NaN (i.e. this method will
+        calculate magnitudes for.  Other magnitudes will be listed as numpy.nan (i.e. this method will
         return as many magnitudes as were loaded with the loadBandpassesFromFiles methods; it will
-        just return numpy.NaN for magnitudes you did not actually ask for)
+        just return numpy.nan for magnitudes you did not actually ask for)
         @param [out] magList is a list of magnitudes in the bandpasses stored in this BandpassDict
         """
 
@@ -301,7 +301,7 @@ class BandpassDict(object):
             return numpy.array(self._magListForSed(dummySed, indices=indices))
 
         else:
-            return numpy.array([numpy.NaN]*len(self._bandpassDict))
+            return numpy.array([numpy.nan]*len(self._bandpassDict))
 
 
     def magDictForSed(self, sedobj, indices=None):
@@ -312,9 +312,9 @@ class BandpassDict(object):
         a copy will be created and resampled onto the wavelength grid of the Bandpasses before
         magnitudes are calculated.  The original Sed will be unchanged.
         @param [in] indices is an optional list of indices indicating which bandpasses to actually
-        calculate magnitudes for.  Other magnitudes will be listed as numpy.NaN (i.e. this method will
+        calculate magnitudes for.  Other magnitudes will be listed as numpy.nan (i.e. this method will
         return as many magnitudes as were loaded with the loadBandpassesFromFiles methods; it will
-        just return numpy.NaN for magnitudes you did not actually ask for)
+        just return numpy.nan for magnitudes you did not actually ask for)
         @param [out] magDict is an OrderedDict of magnitudes in the bandpasses stored in this BandpassDict
         """
 
@@ -345,9 +345,9 @@ class BandpassDict(object):
         @param [in] sedList is a SedList containing the Seds
         whose magnitudes are desired.
         @param [in] indices is an optional list of indices indicating which bandpasses to actually
-        calculate magnitudes for.  Other magnitudes will be listed as numpy.NaN (i.e. this method will
+        calculate magnitudes for.  Other magnitudes will be listed as numpy.nan (i.e. this method will
         return as many magnitudes as were loaded with the loadBandpassesFromFiles methods; it will
-        just return numpy.NaN for magnitudes you did not actually ask for)
+        just return numpy.nan for magnitudes you did not actually ask for)
         @param [out] output_list is a 2-D numpy array containing the magnitudes
         of each Sed (the rows) in each bandpass contained in this BandpassDict
         (the columns)
@@ -392,15 +392,15 @@ class BandpassDict(object):
         @param [in] sedList is a SedList containing the Seds
         whose magnitudes are desired.
         @param [in] indices is an optional list of indices indicating which bandpasses to actually
-        calculate magnitudes for.  Other magnitudes will be listed as numpy.NaN (i.e. this method will
+        calculate magnitudes for.  Other magnitudes will be listed as numpy.nan (i.e. this method will
         return as many magnitudes as were loaded with the loadBandpassesFromFiles methods; it will
-        just return numpy.NaN for magnitudes you did not actually ask for)
+        just return numpy.nan for magnitudes you did not actually ask for)
         @param [out] output_array is a dtyped numpy array of magnitudes (see above).
         """
 
         magList = self.magListForSedList(sedList, indices=indices)
 
-        dtype = numpy.dtype([(bp, numpy.float) for bp in self._bandpassDict.keys()])
+        dtype = numpy.dtype([(bp, float) for bp in self._bandpassDict.keys()])
 
         outputArray = numpy.array([tuple(row) for row in magList], dtype=dtype)
 
@@ -416,7 +416,7 @@ class BandpassDict(object):
         """
 
         if sedobj.wavelen is None:
-            return [numpy.NaN]*len(self._bandpassDict)
+            return [numpy.nan]*len(self._bandpassDict)
         else:
 
             #for some reason, moving this call to flambdaTofnu()
@@ -431,7 +431,7 @@ class BandpassDict(object):
             sedobj.flambdaTofnu()
 
             if indices is not None:
-                outputList = [numpy.NaN] * len(self._bandpassDict)
+                outputList = [numpy.nan] * len(self._bandpassDict)
                 magList = sedobj.manyFluxCalc(self._phiArray, self._wavelenStep, observedBandpassInd=indices)
                 for i, ix in enumerate(indices):
                     outputList[ix] = magList[i]
@@ -448,9 +448,9 @@ class BandpassDict(object):
         a copy will be created and resampled onto the wavelength grid of the Bandpasses before
         fluxes are calculated.  The original Sed will be unchanged.
         @param [in] indices is an optional list of indices indicating which bandpasses to actually
-        calculate fluxes for.  Other fluxes will be listed as numpy.NaN (i.e. this method will
+        calculate fluxes for.  Other fluxes will be listed as numpy.nan (i.e. this method will
         return as many fluxes as were loaded with the loadBandpassesFromFiles methods; it will
-        just return numpy.NaN for fluxes you did not actually ask for)
+        just return numpy.nan for fluxes you did not actually ask for)
         @param [out] fluxList is a list of fluxes in the bandpasses stored in this BandpassDict
         Note on units: Fluxes calculated this way will be the flux density integrated over the
         weighted response curve of the bandpass.  See equaiton 2.1 of the LSST Science Book
@@ -471,7 +471,7 @@ class BandpassDict(object):
             return numpy.array(self._fluxListForSed(dummySed, indices=indices))
 
         else:
-            return numpy.array([numpy.NaN]*len(self._bandpassDict))
+            return numpy.array([numpy.nan]*len(self._bandpassDict))
 
 
     def fluxDictForSed(self, sedobj, indices=None):
@@ -482,9 +482,9 @@ class BandpassDict(object):
         a copy will be created and resampled onto the wavelength grid of the Bandpasses before
         fluxes are calculated.  The original Sed will be unchanged.
         @param [in] indices is an optional list of indices indicating which bandpasses to actually
-        calculate fluxes for.  Other fluxes will be listed as numpy.NaN (i.e. this method will
+        calculate fluxes for.  Other fluxes will be listed as numpy.nan (i.e. this method will
         return as many fluxes as were loaded with the loadBandpassesFromFiles methods; it will
-        just return numpy.NaN for fluxes you did not actually ask for)
+        just return numpy.nan for fluxes you did not actually ask for)
         @param [out] fluxList is a list of fluxes in the bandpasses stored in this BandpassDict
         Note on units: Fluxes calculated this way will be the flux density integrated over the
         weighted response curve of the bandpass.  See equaiton 2.1 of the LSST Science Book
@@ -517,9 +517,9 @@ class BandpassDict(object):
         @param [in] sedList is a SedList containing the Seds
         whose fluxes are desired.
         @param [in] indices is an optional list of indices indicating which bandpasses to actually
-        calculate fluxes for.  Other fluxes will be listed as numpy.NaN (i.e. this method will
+        calculate fluxes for.  Other fluxes will be listed as numpy.nan (i.e. this method will
         return as many fluxes as were loaded with the loadBandpassesFromFiles methods; it will
-        just return numpy.NaN for fluxes you did not actually ask for)
+        just return numpy.nan for fluxes you did not actually ask for)
         @param [out] output_list is a 2-D numpy array containing the fluxes
         of each Sed (the rows) in each bandpass contained in this BandpassDict
         (the columns)
@@ -567,9 +567,9 @@ class BandpassDict(object):
         @param [in] sedList is a SedList containing the Seds
         whose fluxes are desired.
         @param [in] indices is an optional list of indices indicating which bandpasses to actually
-        calculate fluxes for.  Other fluxes will be listed as numpy.NaN (i.e. this method will
+        calculate fluxes for.  Other fluxes will be listed as numpy.nan (i.e. this method will
         return as many fluxes as were loaded with the loadBandpassesFromFiles methods; it will
-        just return numpy.NaN for fluxes you did not actually ask for)
+        just return numpy.nan for fluxes you did not actually ask for)
         @param [out] output_list is a 2-D numpy array containing the fluxes
         of each Sed (the rows) in each bandpass contained in this BandpassDict
         (the columns)
@@ -580,7 +580,7 @@ class BandpassDict(object):
 
         fluxList = self.fluxListForSedList(sedList, indices=indices)
 
-        dtype = numpy.dtype([(bp, numpy.float) for bp in self._bandpassDict.keys()])
+        dtype = numpy.dtype([(bp, float) for bp in self._bandpassDict.keys()])
 
         outputArray = numpy.array([tuple(row) for row in fluxList], dtype=dtype)
 

@@ -1,12 +1,14 @@
 import os
 import unittest
 import pickle
+import pytest
 from siggi import siggi, spectra
 from siggi.lsst_utils import BandpassDict
 from siggi.filters import filterFactory
 import numpy as np
 
 
+@pytest.mark.slow
 class testSiggi(unittest.TestCase):
 
     @classmethod
