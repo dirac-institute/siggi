@@ -6,11 +6,62 @@ __all__ = ["_siggiBase"]
 class _siggiBase(object):
 
     """
-    Base class for siggi optimization.
+    Base class providing filter setup helpers for siggi optimization.
+
+    Holds the geometry and bookkeeping routines shared by
+    :class:`~siggi.siggi.siggi`: seeding the optimizer with starting filter
+    configurations and validating that proposed filter sets are physically
+    sensible.
     """
 
     def set_starting_points(self, x0, num_filters, filt_min, filt_max,
                             ratio=None, width=None, rand_state=None):
+
+        """
+        Build the dimension bounds and seed starting filter configurations.
+
+        Generates a spread of evenly-distributed starting points (full,
+        left-, and right-shifted) plus random points, up to a total of seven
+        seeds, appending them to any configurations supplied in ``x0``.
+
+        Parameters
+        ----------
+        x0 : list or None
+            Pre-existing starting configurations to extend, or ``None`` to
+            start fresh. When provided, each entry must have the shape
+            implied by ``ratio``/``width`` (see below).
+        num_filters : int
+            Number of filters being optimized.
+        filt_min : float
+            Minimum wavelength bound of the filters, in nm.
+        filt_max : float
+            Maximum wavelength bound of the filters, in nm.
+        ratio : float, optional
+            Fixed ratio of top width to bottom width. When set, each filter
+            is described by two parameters (edges), or one when ``width`` is
+            also set.
+        width : float, optional
+            Fixed bottom width. Requires ``ratio`` to be set. When used each
+            filter is described by a single parameter (its left edge).
+        rand_state : numpy.random.RandomState, optional
+            Random state for reproducible random seeds. If ``None``, a fresh
+            ``RandomState`` is created.
+
+        Returns
+        -------
+        dim_list : list of tuple
+            Per-parameter ``(min, max)`` bounds for the optimizer.
+        x0 : list
+            The list of starting configurations.
+
+        Raises
+        ------
+        AssertionError
+            If ``width`` is set without ``ratio``, or if ``x0`` does not have
+            the shape implied by ``ratio``/``width`` and ``num_filters``.
+        ValueError
+            If ``width`` is greater than ``filt_max - filt_min``.
+        """
 
         if width is not None:
             assert (ratio is not None), \
@@ -141,6 +192,49 @@ class _siggiBase(object):
     def create_and_validate_filter_dict(self, filt_edges, filt_min, filt_max,
                                         num_filters, filter_obj,
                                         ratio=None, width=None):
+
+        """
+        Build a filter dictionary and reject physically invalid sets.
+
+        Converts optimizer edge parameters into filter corners and builds a
+        ``BandpassDict``, returning it only if the filters are well-formed:
+        corners strictly increasing, each filter wide enough, all edges
+        within ``[filt_min, filt_max]``, and (for more than one filter)
+        filter centers increasing. Otherwise ``None`` is returned so the
+        optimizer can discard the point.
+
+        Parameters
+        ----------
+        filt_edges : array_like
+            Flat array of filter edge/shape parameters from the optimizer.
+        filt_min : float
+            Minimum allowed wavelength, in nm.
+        filt_max : float
+            Maximum allowed wavelength, in nm.
+        num_filters : int
+            Number of filters expected in ``filt_edges``.
+        filter_obj : baseFilter
+            Filter object used to build corners and bandpasses and to find
+            filter centers. Its wavelength grid must already be set.
+        ratio : float, optional
+            Fixed ratio of top width to bottom width. See
+            :meth:`set_starting_points`.
+        width : float, optional
+            Fixed bottom width. Requires ``ratio``.
+
+        Returns
+        -------
+        BandpassDict or None
+            The validated filter dictionary, or ``None`` if the proposed
+            filter set is invalid.
+
+        Raises
+        ------
+        AssertionError
+            If ``filt_edges`` does not match the length implied by
+            ``num_filters`` and ``ratio``/``width``, if ``width`` exceeds the
+            filter bounds, or if ``filter_obj`` has no wavelength step set.
+        """
 
         # Make sure input is correct shape
         if ratio is not None:

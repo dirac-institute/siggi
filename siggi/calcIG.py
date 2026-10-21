@@ -18,25 +18,40 @@ __all__ = ["calcIG"]
 class calcIG(mathUtils):
 
     """
-    This class will take a set of SEDs and a set of filters
-    and calculate the information gain.
+    Calculate the information gain for a set of SEDs and filters.
 
-    Inputs
-    ------
+    This class takes a set of template SEDs (across a grid of the quantity
+    of interest, e.g. redshift) and a set of filters, simulates the observed
+    colors with realistic photometric noise, and estimates the information
+    gain -- the mutual information, in bits, between the colors and the
+    quantity of interest.
 
-    filter_dict, dict
-
+    Parameters
+    ----------
+    filter_dict : BandpassDict
         Dictionary with the bandpass objects for the filters to test.
-
-    sed_list, list
-
-        List with the template SEDs at the different redshifts and already
-        normalized in flux
-
-    sed_probs, list
-
-        List with the probabilities for each SED at the given redshift
-        in the same order as sed_list
+    sed_list : list
+        Nested list of template ``Sed`` objects: one inner list per ``y``
+        bin, each already redshifted and flux-normalized.
+    y_probs : array_like
+        Probability (prior) weight for each value in ``y_vals``, in the same
+        order. The first entry must be ``0`` (see :meth:`calc_gain`).
+    y_vals : array_like
+        The grid of the quantity of interest (e.g. redshift bin edges).
+    n_pts : int, optional
+        Number of Monte-Carlo samples used in the entropy estimate.
+        Default 1_000_000.
+    sky_mag : float, optional
+        Magnitude of the sky background in ``ref_filter``. Default 20.47.
+    ref_filter : Bandpass, optional
+        Reference filter used to normalize the sky brightness. Defaults to
+        LSST ``i``.
+    phot_params : dict, optional
+        Mapping of filter name to ``PhotometricParameters``. If ``None``,
+        default LSST parameters are built for each filter.
+    fwhm_eff : float, optional
+        Effective FWHM of the seeing, in arcseconds, used in the photometric
+        error calculation. Default 0.8.
     """
 
     def __init__(self, filter_dict, sed_list, y_probs, y_vals,
@@ -85,8 +100,40 @@ class calcIG(mathUtils):
     def calc_colors(self, sed_list, return_all=False):
 
         """
-        Calculate the colors and errors in color measurement
-        of the SEDs in the given filters.
+        Calculate the colors and color errors of the SEDs in the filters.
+
+        For each SED the magnitudes through the filters are computed and
+        differenced into adjacent-filter colors; the color errors are
+        propagated from the per-filter magnitude errors (which include the
+        sky background and photometric parameters set on construction).
+
+        Parameters
+        ----------
+        sed_list : list
+            List of ``Sed`` objects to measure.
+        return_all : bool, optional
+            If ``True``, also return the per-filter signal-to-noise ratios,
+            magnitudes, magnitude errors, and sky magnitudes. Default
+            ``False``.
+
+        Returns
+        -------
+        sed_colors : numpy.ndarray
+            Array of adjacent-filter colors, one row per SED.
+        color_errors : numpy.ndarray
+            Array of 1-sigma color errors matching ``sed_colors``.
+        snr_values : list
+            Per-filter signal-to-noise ratios. Only returned when
+            ``return_all`` is ``True``.
+        sed_mag_list : list
+            Per-filter magnitudes for each SED. Only returned when
+            ``return_all`` is ``True``.
+        mag_errors : list
+            Per-filter magnitude errors for the last SED. Only returned when
+            ``return_all`` is ``True``.
+        sky_mags : list
+            Per-filter sky magnitudes. Only returned when ``return_all`` is
+            ``True``.
         """
 
         sed_colors = []
@@ -140,7 +187,31 @@ class calcIG(mathUtils):
     def calc_gain(self, rand_state=None):
 
         """
-        Calculate the information gain.
+        Estimate the information gain and total entropy by Monte Carlo.
+
+        Samples the prior over ``y``, builds a multivariate-normal color
+        distribution per ``y`` bin and SED, draws color samples, and
+        estimates the total entropy ``H(y)`` and the conditional entropy
+        ``H(y | colors)`` to return the information gain ``H(y) - H(y|x)``.
+
+        Parameters
+        ----------
+        rand_state : numpy.random.RandomState, optional
+            Random state for reproducible sampling. If ``None``, a fresh
+            ``RandomState`` is created.
+
+        Returns
+        -------
+        info_gain : float
+            The information gain, ``H(y) - H(y | colors)``, in bits.
+        hy : float
+            The total entropy ``H(y)`` of the prior, in bits.
+
+        Raises
+        ------
+        ValueError
+            If the first entry of ``y_probs`` is not ``0`` (the probability
+            function must start at ``(0., 0.)``).
         """
 
         if rand_state is None:
@@ -226,8 +297,22 @@ class calcIG(mathUtils):
     def calc_IG(self, rand_state=None):
 
         """
-        Use the entropy and conditional entropy methods and then subtract
-        to get information gain.
+        Compute the information gain.
+
+        Thin wrapper around :meth:`calc_gain` that returns only the
+        information gain (the difference of the total and conditional
+        entropies).
+
+        Parameters
+        ----------
+        rand_state : numpy.random.RandomState, optional
+            Random state for reproducible sampling. If ``None``, a fresh
+            ``RandomState`` is created.
+
+        Returns
+        -------
+        float
+            The information gain, in bits.
         """
 
         info_gain, h_y = self.calc_gain(rand_state)

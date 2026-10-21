@@ -7,26 +7,29 @@ __all__ = ["filterFactory"]
 class filterFactory(object):
 
     """
-    Factory class for different filters.
+    Factory for creating filter-shape objects by name.
     """
 
     @staticmethod
     def create_filter_object(filter_type):
-        """Create the filter object.
+        """Create a filter-shape object of the requested type.
 
         Parameters
         ----------
-        filterType : str, 'trap' or 'comb'
-            Type of filter to set up.
+        filter_type : {'trap', 'comb'}
+            Type of filter to set up: ``'trap'`` for a
+            :class:`~siggi.filters.trapezoidFilter.trapezoidFilter` or
+            ``'comb'`` for a :class:`~siggi.filters.combFilter.combFilter`.
 
         Returns
         -------
-
+        baseFilter
+            A new, unconfigured filter object of the requested type.
 
         Raises
         ------
         ValueError
-            The centroid find type is not supported.
+            If ``filter_type`` is not ``'trap'`` or ``'comb'``.
         """
 
         if filter_type == 'trap':

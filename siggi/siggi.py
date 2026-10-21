@@ -13,52 +13,61 @@ __all__ = ["siggi"]
 
 
 def unwrap_self_f(arg, arg2, **kwarg):
+    """Module-level trampoline to call :meth:`siggi.calc_results`.
+
+    Lets a bound ``siggi.calc_results`` method be dispatched through joblib's
+    parallel backend, which requires a top-level (picklable) callable.
+
+    Parameters
+    ----------
+    arg : siggi
+        The ``siggi`` instance providing ``calc_results``.
+    arg2 : BandpassDict
+        The filter dictionary passed through to ``calc_results``.
+    **kwarg
+        Additional keyword arguments forwarded to ``calc_results``.
+
+    Returns
+    -------
+    float
+        The result of ``arg.calc_results(arg2, **kwarg)``.
+    """
     return siggi.calc_results(arg, arg2, **kwarg)
 
 
 class siggi(_siggiBase):
 
     """
-    Class to run a complete siggi maximization run.
+    Run a complete siggi filter-optimization.
 
-    Input
-    -----
+    On construction the template SEDs are redshifted across a grid and
+    flux-normalized to a calibration magnitude, ready for
+    :meth:`optimize_filters` to search for the most informative filter set.
 
-    spec_list, list
-
-        List of spectra you wish to use as templates
-        already stored as LSST Sims SED Objects
-
-    spec_weights, list
-
-        The weight you wish to assign to each SED
-        template, usually just 1./len(spec_list)
-
-    z_prior, function
-
-        The redshift prior function you wish to use.
-
-    z_min, float
-
-        The minimum redshift for each SED
-
-    z_max, float
-
-        The maximum redshift for each SED
-
-    z_steps, int
-
-        The number of steps in the redshift grid
-
-    calib_filter, Bandpass Object, default = lsst 'r' band
-
-        The filter you wish to use to set the sky brightness
-        and brightness of the SEDs when optimizing.
-
-    calib_mag, float, default = 22.0
-
-        The magnitude in the calib_filter bandpass to which observed
-        SEDs will be normalized.
+    Parameters
+    ----------
+    spec_list : list
+        Template spectra to use, as LSST Sims ``Sed`` objects.
+    spec_weights : list
+        Weight assigned to each SED template, usually
+        ``1. / len(spec_list)``.
+    z_prior : callable
+        Redshift prior function, evaluated on the redshift grid.
+    z_min : float, optional
+        Minimum redshift of the grid. Default 0.0.
+    z_max : float, optional
+        Maximum redshift of the grid. Default 2.5.
+    z_steps : int, optional
+        Number of steps in the redshift grid. Default 51.
+    calib_filter : Bandpass, optional
+        Filter used to set the sky brightness and the brightness of the SEDs
+        when optimizing. Defaults to the LSST ``i`` band.
+    calib_mag : float, optional
+        Magnitude in ``calib_filter`` to which observed SEDs are normalized.
+        Default 25.3.
+    phot_params : dict, optional
+        Mapping of filter name to ``PhotometricParameters``. If ``None``,
+        default LSST parameters are used.
     """
 
     def __init__(self, spec_list, spec_weights, z_prior,
@@ -117,140 +126,102 @@ class siggi(_siggiBase):
                          save_optimizer=None):
 
         """
-        Run the optimization for redshift estimation over the input filters
-        and redshift grid. Define the brightness of the galaxies and the sky.
+        Optimize the filter set for information gain about redshift.
 
-        Input
-        -----
+        Runs a Bayesian optimization (scikit-optimize) over the filter-edge
+        parameters on the redshift grid built at construction, evaluating the
+        information gain of each validated candidate filter set, optionally in
+        parallel.
 
-        filt_min, float, default = 300.
-
-            The minimum wavelength in nm of the bandpasses.
-
-        filt_max, float, default = 1100.
-
-            The maximum wavelength in nm of the bandpasses.
-
-        sky_mag, float, default = 21.2
-
-            The default magnitude of the sky background in the calib
-            filter specified when instantiating.
-
-        num_filters, int, default = 6
-
-            The number of filters to optimize
-
-        filt_type, str, 'trap' or 'comb', default = 'trap'
-
-            The shape of the filters. Currently can create
-            trapezoidal shapes or comb filters before the CCD response function
-            is included.
-
-        frozen_filt_dict, BandpassDict Object or None, default = None
-
-            A set of bandpasses to include in the calculation of colors
-            but not to be changed in the optimization. These will stay
-            in place while other filters are optimized. This should be
-            the bandpass files before the hardware and atmosphere effects
-            are included in the throughput.
-
-        frozen_filt_eff_wavelen, list of floats or None, default = None
-
-            If a set of frozen filters is included then a set of
-            effective wavelengths must also be added in order to sort their
-            positions when calculating colors.
-
-        set_ratio, float or None, default = None
-
-            Use this to only optimize over the width of a set of trapezoidal
-            filters with a set ratio between the top width and the bottom width
-            specified here. For instance, 1.0 will mean a top hat filter.
-
-        width_min, float, default = 30.
-
-            If set_ratio is used then this is the minimum width the bottom
-            of the filter must have.
-
-        width_max, float, default = 120.
-
-            If set_ratio is used then this is the maximum width the bottom
-            of the filter can have.
-
-        starting_points, list (n_pts, n_filters, 2 or 4) or None,
-            default = None
-
-            This is a list of starting point for the values of the filter
-            corners. This is a list of lists where each list contains the s
-            tarting positions of the filters.
-
-            If set_ratio is not None then
-            each of these lists have two floats to specify the bottom left
-            and bottom right of a filter.
-
-            If set_ratio is None then this is the same
-            except that the lists are four numbers where the order is bottom
-            left, top left, top right, bottom right corners of the filters.
-
-        system_wavelen_min, float, default = 300.
-
-            This is the minimum edge of the Bandpass Objects in nm.
-
-        system_wavelen_max, float default = 1200.
-
-            This is the maximum edge of the Bandpass Objects in nm.
-
-        system_wavelen_step, float default = 0.1
-
-            This is the wavelength step of the Bandpass Objects in nm.
-
-        procs, int, default = 1
-
-            This is the number of processors to use in optimization.
-
-        n_opt_points, int, default = 100
-
-            The minimum number of points to calculate the information gain
-            in the optimization. If this is not a multiple of the
-            number of processors used then the actual number will be
-            greater than this.
-
-        max_search_factor, int, default = 50
-
-            This number multiplied by the number of processors used is the
-            maximum number of points the optimizer will try to find
-            allowable filter edges before a random allowable set of numbers
-            will be chosen to fill in the remaining points in a search
-            iteration. This happens since the optimizer will try to pick points
-            where the filters are not in order of lowest filter center to
-            highest at the beginning of the optimization
-            and we want to restrict the parameter space to only where
-            this is the case in order to better optimize in shorter time.
-
-        rand_state, numpy RandomState, int or None, default = None
-
-            Provide a RandomState Object or the integer seed for a RandomState
-            in order to generate reproducible results.
-
-        load_optimizer, None or scikit-optimizer optimizer object,
-            default = None
-
-            If this is a previously saved object then the optimizer will
-            continue from this state for n_opt_points. This assumes the
-            saved optimizer state ran for at least 10 points.
-
-        save_optimizer, None or str, default = None
-
-            If this is a string then it will save a copy of the state of the
-            optimizer at the end to the filename given by the string.
+        Parameters
+        ----------
+        filt_min : float, optional
+            Minimum wavelength of the bandpasses, in nm. Default 300.
+        filt_max : float, optional
+            Maximum wavelength of the bandpasses, in nm. Default 1100.
+        sky_mag : float, optional
+            Magnitude of the sky background in the calibration filter set at
+            construction. Default 20.47.
+        num_filters : int, optional
+            Number of filters to optimize. Default 6.
+        filt_type : {'trap', 'comb'}, optional
+            Shape of the filters (before the CCD response is included):
+            trapezoidal or comb. Default ``'trap'``.
+        frozen_filt_dict : BandpassDict, optional
+            Bandpasses to include when computing colors but hold fixed during
+            optimization. These should be the throughputs before hardware and
+            atmosphere effects are included. Requires
+            ``frozen_filt_eff_wavelen``.
+        frozen_filt_eff_wavelen : list of float, optional
+            Effective wavelengths of the frozen filters, used to sort their
+            positions when computing colors. Required with
+            ``frozen_filt_dict``.
+        set_ratio : float, optional
+            Optimize only the width of trapezoidal filters with this fixed
+            ratio of top width to bottom width. For example, ``1.0`` gives a
+            top-hat filter.
+        set_width : float, optional
+            Fixed bottom width of the filters, in nm. Requires ``set_ratio``.
+        starting_points : list, optional
+            Starting configurations for the filter parameters, one list per
+            point. With ``set_ratio`` set (and no ``set_width``) each list has
+            two values per filter (bottom-left, bottom-right); with neither
+            set, four values per filter (bottom-left, top-left, top-right,
+            bottom-right).
+        starting_vals : list, optional
+            Pre-computed objective values corresponding to the leading entries
+            of ``starting_points``, fed to the optimizer with ``tell``.
+        system_wavelen_min : float, optional
+            Minimum edge of the ``Bandpass`` objects, in nm. Default 300.
+        system_wavelen_max : float, optional
+            Maximum edge of the ``Bandpass`` objects, in nm. Default 1200.
+        system_wavelen_step : float, optional
+            Wavelength step of the ``Bandpass`` objects, in nm. Default 0.1.
+        procs : int, optional
+            Number of processors to use. Default 1.
+        n_opt_points : int, optional
+            Minimum number of points at which to evaluate the information
+            gain. If not a multiple of ``procs`` the actual number will be
+            larger. Default 100.
+        acq_func_kwargs_dict : dict, optional
+            Extra keyword arguments passed to the optimizer's acquisition
+            function.
+        acq_opt_kwargs_dict : dict, optional
+            Extra keyword arguments passed to the optimizer's acquisition
+            optimizer.
+        checkpointing : bool, optional
+            If ``True``, write the running ``Xi.out`` and ``yi.out`` arrays to
+            the working directory each iteration. Default ``True``.
+        optimizer_verbosity : int, optional
+            Verbosity level for the optimizer and the parallel backend.
+            Default 5.
+        parallel_backend : str, optional
+            joblib parallel backend. Default ``"multiprocessing"``.
+        max_search_factor : int, optional
+            Multiplied by ``procs``, the maximum number of points the
+            optimizer will try in a search iteration before filling the rest
+            with random allowable points. This bounds the time spent rejecting
+            out-of-order filter proposals early in the run. Default 50.
+        rand_state : numpy.random.RandomState or int, optional
+            Random state object or integer seed for reproducible results.
+        load_optimizer : skopt.Optimizer, optional
+            A previously saved optimizer to continue from for ``n_opt_points``
+            more points. Assumes the saved state ran for at least 10 points.
+        save_optimizer : str, optional
+            If given, pickle the final optimizer state to this filename.
 
         Returns
         -------
+        skopt.Optimizer
+            The optimizer holding the inputs and outputs of the run. The
+            information-gain values are ``np.abs(opt.yi)`` and the
+            corresponding filter parameters are in ``opt.Xi``.
 
-        opt, Optimizer object
-
-            Contains the input and output values of the optimization. Use the
-            absolute value of opt.yi for the information gain values. The
-            corresponding filter inputs are in opt.Xi.
+        Raises
+        ------
+        AssertionError
+            If ``frozen_filt_dict`` is given without
+            ``frozen_filt_eff_wavelen``.
         """
 
         if frozen_filt_dict is not None:
@@ -403,6 +374,28 @@ class siggi(_siggiBase):
 
     def set_filters(self, filt_dict):
 
+        """
+        Combine optimized filters with any frozen filters, sorted by center.
+
+        Parameters
+        ----------
+        filt_dict : BandpassDict
+            The optimized (non-frozen) filters.
+
+        Returns
+        -------
+        BandpassDict
+            ``filt_dict`` unchanged if no frozen filters were set; otherwise a
+            new dictionary merging the frozen and optimized filters, sorted by
+            effective wavelength.
+
+        Raises
+        ------
+        ValueError
+            If the combined effective-wavelength list is not a list (i.e.
+            ``frozen_filt_eff_wavelen`` was not supplied as a list).
+        """
+
         if self.frozen_filt_dict is None:
             return filt_dict
         else:
@@ -421,6 +414,25 @@ class siggi(_siggiBase):
             return BandpassDict(filter_list, filter_names)
 
     def calc_results(self, filt_dict):
+
+        """
+        Evaluate the (negated) information gain for one filter set.
+
+        Combines the proposed filters with any frozen filters, builds a
+        :class:`~siggi.calcIG.calcIG` on the redshift grid, and returns the
+        negated information gain so the optimizer can minimize it.
+
+        Parameters
+        ----------
+        filt_dict : BandpassDict
+            The optimized (non-frozen) filters to evaluate.
+
+        Returns
+        -------
+        float
+            Minus the information gain, in bits, or ``0`` if the combined
+            filter set is empty/invalid.
+        """
 
         filt_dict = self.set_filters(filt_dict)
 

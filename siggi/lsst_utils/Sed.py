@@ -375,7 +375,7 @@ def cache_LSST_seds(wavelen_min=None, wavelen_max=None):
 
 class Sed(object):
     """Class for holding and utilizing spectral energy distributions (SEDs)"""
-    def __init__(self, wavelen=None, flambda=None, fnu=None, badval=numpy.NaN, name=None):
+    def __init__(self, wavelen=None, flambda=None, fnu=None, badval=numpy.nan, name=None):
         """
         Initialize sed object by giving filename or lambda/flambda array.
         Note that this does *not* regrid flambda and leaves fnu undefined.
@@ -753,7 +753,7 @@ class Sed(object):
                               + 'and sed %s (%.2f to %.2f)' % (self.name, wavelen.min(), wavelen.max()))
             # Do the interpolation of wavelen/flux onto grid. (type/len failures will die here).
             if wavelen[0] > wavelen_grid[0] or wavelen[-1] < wavelen_grid[-1]:
-                f = interpolate.interp1d(wavelen, flux, bounds_error=False, fill_value=numpy.NaN)
+                f = interpolate.interp1d(wavelen, flux, bounds_error=False, fill_value=numpy.nan)
                 flux_grid = f(wavelen_grid)
             else:
                 flux_grid = numpy.interp(wavelen_grid, wavelen, flux)

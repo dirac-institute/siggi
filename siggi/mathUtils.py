@@ -6,6 +6,14 @@ __all__ = ["mathUtils"]
 
 class mathUtils(object):
 
+    """
+    Mathematical helpers shared across ``siggi``.
+
+    Provides Shannon-entropy and hyperellipsoid-volume utilities used by
+    the information-gain calculation. Intended to be subclassed (e.g. by
+    :class:`~siggi.calcIG.calcIG`).
+    """
+
     def __init__(self):
 
         return
@@ -13,7 +21,17 @@ class mathUtils(object):
     def calc_h(self, sed_probs):
 
         """
-        Calculates the total entropy from a list of probabilities.
+        Calculate the Shannon entropy of a probability distribution.
+
+        Parameters
+        ----------
+        sed_probs : array_like
+            Probabilities that sum to 1. Each entry must be positive.
+
+        Returns
+        -------
+        float
+            The total entropy, ``-sum(p * log2(p))``, in bits.
         """
 
         h_sum = 0
@@ -26,17 +44,39 @@ class mathUtils(object):
     def calc_integral_scaling(self, distances, n_dim, dim_scale):
 
         """
-        The integration works by calculating the volume of
-        slices of a hyperellipsoid under the probability density
-        curve.
+        Compute the volume of hyperellipsoid shells for integration.
 
-        This part calculates the area of each slice and when
-        it is returned it is multiplied by the pdf value
-        to get a volume.
+        The integration works by calculating the volume of slices of a
+        hyperellipsoid under the probability density curve. This method
+        returns the area of each slice; multiplying by the pdf value gives
+        the volume of the slice. Because the width of the probability
+        distribution differs in each dimension, each dimension is scaled
+        appropriately via ``dim_scale``.
 
-        Since the width of the probability distribution
-        in each dimension will be different this scales
-        each dimension in the integral appropriately.
+        Parameters
+        ----------
+        distances : numpy.ndarray
+            Monotonically increasing shell radii. Consecutive entries define
+            the inner and outer radius of each shell.
+        n_dim : int
+            Number of dimensions of the hyperellipsoid.
+        dim_scale : array_like
+            Per-dimension scale factors (the relative widths of the
+            distribution in each dimension), used to build the scaling
+            determinant.
+
+        Returns
+        -------
+        numpy.ndarray
+            The scaled shell volume factor for each radius in ``distances``.
+
+        Notes
+        -----
+        The hyperellipsoid volume uses the n-sphere volume term
+        :math:`\\pi^{d/2} / \\Gamma(d/2 + 1)` scaled by the determinant of
+        ``diag(dim_scale)``. See
+        https://en.wikipedia.org/wiki/N-sphere and
+        https://math.stackexchange.com/questions/332391.
         """
 
         # (r_outer ^ d) - (r_inner ^ d)

@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "siggi"
+version = "0.1.5"
+description = "Spectral Information Gain Optimization"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "Bryce Kalmbach", email = "brycek@uw.edu" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "scikit-learn",
+    "scikit-optimize",
+    "joblib",
+]
+
+[project.optional-dependencies]
+docs = [
+    "sphinx",
+    "myst-parser",
+    "sphinx-rtd-theme",
+    "sphinx-autodoc-typehints",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+
+[project.urls]
+Homepage = "https://github.com/dirac-institute/siggi"
+Repository = "https://github.com/dirac-institute/siggi"
+Paper = "https://ui.adsabs.harvard.edu/abs/2020ApJ...890...74K/abstract"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.setuptools.packages.find]
+include = ["siggi*"]
+
+[tool.setuptools.package-data]
+"*" = ["README.md", "LICENSE"]
+"siggi" = ["data/*", "data/lsst_baseline_throughputs/*"]
